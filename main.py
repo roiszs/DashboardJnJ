@@ -53,22 +53,21 @@ def serve_dashboard():
 def serve_form():
     return "static/add.html"
 
-from sqlalchemy import func
-
 @app.get("/api/eficiencias/weekly")
 def eficiencia_semanal(db: Session = Depends(get_db)):
-    # Agrupamos por semana (YYYY-WW) y por tipo_proceso, y calculamos promedio de eficiencia_linea
+    # Agrupamos por semana (YYYY-WW) y por descripción de proceso,
+    # calculando promedio de eficiencia_linea
     query = (
         db.query(
             func.strftime("%Y-%W", models.Eficiencia.fecha).label("semana"),
-            models.Eficiencia.tipo_proceso,
+            models.Eficiencia.proceso,
             func.avg(models.Eficiencia.eficiencia_linea).label("promedio_linea")
         )
-        .group_by("semana", models.Eficiencia.tipo_proceso)
+        .group_by("semana", models.Eficiencia.proceso)
         .order_by("semana")
     )
     results = query.all()
     return [
-        {"semana": semana, "tipo_proceso": tp, "promedio_linea": float(prom)}
-        for semana, tp, prom in results
+        {"semana": semana, "proceso": proceso, "promedio_linea": float(prom)}
+        for semana, proceso, prom in results
     ]

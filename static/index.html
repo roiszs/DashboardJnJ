@@ -110,19 +110,19 @@
   
   window.onload = renderDashboard;
 
-async function renderWeekly() {
+  async function renderWeekly() {
   const res = await fetch('/api/eficiencias/weekly');
   const data = await res.json();
 
-  // Sacamos todas las semanas y tipos de proceso
+  // Extraemos todas las semanas y procesos (descripciones)
   const semanas = [...new Set(data.map(r => r.semana))].sort();
-  const procesos = [...new Set(data.map(r => r.tipo_proceso))];
+  const procesos = [...new Set(data.map(r => r.proceso))];
 
-  // Creamos un dataset por proceso
-  const datasets = procesos.map(tp => ({
-    label: tp,
-    data: semanas.map(s => {
-      const rec = data.find(r => r.semana === s && r.tipo_proceso === tp);
+  // Creamos un dataset por cada descripción de proceso
+  const datasets = procesos.map(proc => ({
+    label: proc,
+    data: semanas.map(sem => {
+      const rec = data.find(r => r.semana === sem && r.proceso === proc);
       return rec ? rec.promedio_linea : 0;
     })
   }));
@@ -140,8 +140,8 @@ async function renderWeekly() {
 }
 
 window.onload = () => {
-  renderDashboard();   // tu función original
-  renderWeekly();      // la nueva
+  renderDashboard();   // tu tabla y otros charts
+  renderWeekly();      // ahora por descripción
 };
   </script>
 </body>
