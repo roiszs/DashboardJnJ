@@ -26,9 +26,6 @@
     <label>Nombre del Asociado
       <input name="nombre_asociado" required placeholder="Nombre y primer apellido"/>
     </label>
-    <label>WWID
-      <input name="wwid" type="number" required />
-    </label>
     <label>Línea
       <input name="linea" required placeholder="p.ej. L27" />
     </label>
@@ -45,14 +42,8 @@
     <label>Proceso (descripción)
       <input name="proceso" required placeholder="p.ej. Drill" />
     </label>
-    <label>Número de Batch
-      <input name="numero_batch" required />
-    </label>
     <label>Eficiencia del Asociado (%)
       <input name="eficiencia_asociado" type="number" step="0.1" required />
-    </label>
-    <label>Eficiencia de la Línea (%) (opcional)
-      <input name="eficiencia_linea" type="number" step="0.1" />
     </label>
     <label>Fecha
       <input name="fecha" type="date" required />
@@ -70,7 +61,6 @@
       const form = e.target;
       const data = Object.fromEntries(new FormData(form));
       // Ajusta tipos
-      data.wwid = Number(data.wwid);
       data.eficiencia_asociado = Number(data.eficiencia_asociado);
       if (data.eficiencia_linea) data.eficiencia_linea = Number(data.eficiencia_linea);
 
