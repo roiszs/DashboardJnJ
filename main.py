@@ -10,9 +10,9 @@ from database import SessionLocal, engine
 # 1) Crea las tablas
 models.Base.metadata.create_all(bind=engine)
 
+
 app = FastAPI()
 
-# 2) Dependencia de BD
 def get_db():
     db = SessionLocal()
     try:

@@ -32,9 +32,9 @@
   <table id="efTable">
     <thead>
       <tr>
-        <th>Asociado</th><th>WWID</th><th>Línea</th><th>Supervisor</th>
-        <th>Tipo</th><th>Proceso</th><th>Batch</th>
-        <th>Efic. Asociado</th><th>Efic. Línea</th><th>Fecha</th><th>Turno</th>
+        <th>Asociado</th><th>Línea</th><th>Supervisor</th>
+        <th>Tipo</th><th>Proceso</th>
+        <th>Efic. Asociado</th><th>Fecha</th><th>Turno</th>
         <th>Acciones</th>
       </tr>
     </thead>
@@ -52,14 +52,11 @@
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${r.nombre_asociado}</td>
-        <td>${r.wwid}</td>
         <td>${r.linea}</td>
         <td>${r.supervisor}</td>
         <td>${r.tipo_proceso}</td>
         <td>${r.proceso}</td>
-        <td>${r.numero_batch}</td>
         <td>${r.eficiencia_asociado.toFixed(1)}%</td>
-        <td>${(r.eficiencia_linea||0).toFixed(1)}%</td>
         <td>${r.fecha}</td>
         <td>${r.turno}</td>
          <!-- Aquí agrega: -->
