@@ -1,17 +1,17 @@
-# main.py
-from fastapi import FastAPI, Depends, HTTPException
-from typing import List
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-import models
+import models, schemas
 from database import SessionLocal, engine
-import schemas          # o bien: from schemas import Eficiencia, EficienciaCreate
 
-# Crea tablas
+# 1) Crea las tablas
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+# 2) Dependencia de BD
 def get_db():
     db = SessionLocal()
     try:
@@ -19,28 +19,35 @@ def get_db():
     finally:
         db.close()
 
-@app.get(
-    "/api/eficiencias",
-    response_model=List[schemas.Eficiencia]      # aquí usa schemas.Eficiencia
-)
+# 3) Endpoints de tu API
+@app.get("/api/eficiencias", response_model=list[schemas.Eficiencia])
 def leer_eficiencias(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return db.query(models.Eficiencia).offset(skip).limit(limit).all()
 
-@app.post(
-    "/api/eficiencias",
-    response_model=schemas.Eficiencia,           # y aquí también
-    status_code=201
-)
-def crear_eficiencia(
-    payload: schemas.EficienciaCreate,
-    db: Session = Depends(get_db)
-):
+@app.post("/api/eficiencias", response_model=schemas.Eficiencia, status_code=201)
+def crear_eficiencia(payload: schemas.EficienciaCreate, db: Session = Depends(get_db)):
     registro = models.Eficiencia(**payload.dict())
     db.add(registro)
     db.commit()
     db.refresh(registro)
     return registro
 
-# en main.py, al final
-from fastapi.staticfiles import StaticFiles
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+@app.delete("/api/eficiencias/{ef_id}", status_code=status.HTTP_204_NO_CONTENT)
+def borrar_eficiencia(ef_id: int, db: Session = Depends(get_db)):
+    reg = db.query(models.Eficiencia).filter(models.Eficiencia.id == ef_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    db.delete(reg)
+    db.commit()
+
+# 4) Monta los estáticos en /static
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# 5) Sirve tus páginas HTML
+@app.get("/", response_class=FileResponse)
+def serve_dashboard():
+    return "static/index.html"
+
+@app.get("/add.html", response_class=FileResponse)
+def serve_form():
+    return "static/add.html"

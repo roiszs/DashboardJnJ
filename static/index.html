@@ -12,7 +12,16 @@
     th { background: #f4f4f4; }
   </style>
 </head>
+
 <body>
+     <!-- Botón para ir al formulario -->
+  <button
+    style="margin-bottom: 20px; padding: 8px 16px;"
+    onclick="location.href='/add.html'"
+  >
+    ➕ Agregar Registro
+  </button>
+
   <h1>Dashboard de Eficiencias</h1>
   <canvas id="eficienciaChart" width="800" height="300"></canvas>
   <table id="efTable">
@@ -21,6 +30,7 @@
         <th>Asociado</th><th>WWID</th><th>Línea</th><th>Supervisor</th>
         <th>Tipo</th><th>Proceso</th><th>Batch</th>
         <th>Efic. Asociado</th><th>Efic. Línea</th><th>Fecha</th><th>Turno</th>
+        <th>Acciones</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -47,6 +57,10 @@
         <td>${(r.eficiencia_linea||0).toFixed(1)}%</td>
         <td>${r.fecha}</td>
         <td>${r.turno}</td>
+         <!-- Aquí agrega: -->
+    <td>
+      <button onclick="borrarRegistro(${r.id}, this)">🗑 Eliminar</button>
+    </td>
       `;
       tbody.appendChild(tr);
     });
@@ -79,7 +93,16 @@
       }
     });
   }
-
+   async function borrarRegistro(id, btn) {
+    if (!confirm("¿Seguro que quieres eliminar este registro?")) return;
+    const res = await fetch(`/api/eficiencias/${id}`, { method: 'DELETE' });
+    if (res.status === 204) {
+      btn.closest('tr').remove();
+    } else {
+      alert("Error al eliminar el registro");
+    }
+  } 
+  
   window.onload = renderDashboard;
   </script>
 </body>
