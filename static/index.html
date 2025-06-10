@@ -23,6 +23,11 @@
   </button>
 
   <h1>Dashboard de Eficiencias</h1>
+  <h2>Eficiencia Promedio Semanal por Proceso</h2>
+<canvas id="weeklyChart" width="800" height="300"></canvas>
+
+<!-- Luego tu tabla existente -->
+<table id="efTable"> … </table>
   <canvas id="eficienciaChart" width="800" height="300"></canvas>
   <table id="efTable">
     <thead>
@@ -104,6 +109,40 @@
   } 
   
   window.onload = renderDashboard;
+
+async function renderWeekly() {
+  const res = await fetch('/api/eficiencias/weekly');
+  const data = await res.json();
+
+  // Sacamos todas las semanas y tipos de proceso
+  const semanas = [...new Set(data.map(r => r.semana))].sort();
+  const procesos = [...new Set(data.map(r => r.tipo_proceso))];
+
+  // Creamos un dataset por proceso
+  const datasets = procesos.map(tp => ({
+    label: tp,
+    data: semanas.map(s => {
+      const rec = data.find(r => r.semana === s && r.tipo_proceso === tp);
+      return rec ? rec.promedio_linea : 0;
+    })
+  }));
+
+  new Chart(document.getElementById('weeklyChart'), {
+    type: 'line',
+    data: { labels: semanas, datasets },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true, max: 100 }
+      }
+    }
+  });
+}
+
+window.onload = () => {
+  renderDashboard();   // tu función original
+  renderWeekly();      // la nueva
+};
   </script>
 </body>
 </html>
