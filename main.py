@@ -53,19 +53,28 @@ def serve_dashboard():
 def serve_form():
     return "static/add.html"
 
+from collections import defaultdict
+
 @app.get("/api/eficiencias/weekly")
-def eficiencia_semanal(db: Session = Depends(get_db)):
-    query = (
-        db.query(
-            func.strftime("%Y-%W", models.Eficiencia.fecha).label("semana"),
-            models.Eficiencia.proceso,
-            func.avg(models.Eficiencia.eficiencia_linea).label("promedio_linea")
-        )
-        .group_by("semana", models.Eficiencia.proceso)
-        .order_by("semana")
-    )
-    results = query.all()
-    return [
-        {"semana": semana, "proceso": proceso, "promedio_linea": float(prom)}
-        for semana, proceso, prom in results
-    ]
+def eficiencia_semanal_iso(db: Session = Depends(get_db)):
+    # 1) Trae todos los registros
+    items = db.query(models.Eficiencia).all()
+
+    # 2) Agrupa por (año, semana ISO, proceso) y acumula eficiencias de asociados
+    grupos = defaultdict(list)
+    for r in items:
+        year, week, _ = r.fecha.isocalendar()  # ISO-week
+        grupos[(year, week, r.proceso)].append(r.eficiencia_asociado)
+
+    # 3) Construye la salida con promedio
+    salida = []
+    for (year, week, proceso), vals in grupos.items():
+        salida.append({
+            "semana": f"{year}-{week:02d}",           # ej. "2025-04"
+            "proceso": proceso,
+            "promedio_asociado": round(sum(vals)/len(vals), 2)
+        })
+
+    # 4) Ordénalo y devuelve
+    salida.sort(key=lambda x: x["semana"])
+    return salida
