@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-
+from collections import defaultdict
 import models, schemas
 from database import SessionLocal, engine
 
@@ -55,8 +55,6 @@ def serve_form():
 
 @app.get("/api/eficiencias/weekly")
 def eficiencia_semanal(db: Session = Depends(get_db)):
-    # Agrupamos por semana (YYYY-WW) y por descripción de proceso,
-    # calculando promedio de eficiencia_linea
     query = (
         db.query(
             func.strftime("%Y-%W", models.Eficiencia.fecha).label("semana"),
