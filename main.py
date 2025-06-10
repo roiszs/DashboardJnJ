@@ -40,3 +40,7 @@ def crear_eficiencia(
     db.commit()
     db.refresh(registro)
     return registro
+
+# en main.py, al final
+from fastapi.staticfiles import StaticFiles
+app.mount("/", StaticFiles(directory="static", html=True), name="static")

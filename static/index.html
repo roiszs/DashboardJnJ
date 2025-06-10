@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard de Eficiencias</title>
+  <!-- Chart.js desde CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #f4f4f4; }
+  </style>
+</head>
+<body>
+  <h1>Dashboard de Eficiencias</h1>
+  <canvas id="eficienciaChart" width="800" height="300"></canvas>
+  <table id="efTable">
+    <thead>
+      <tr>
+        <th>Asociado</th><th>WWID</th><th>Línea</th><th>Supervisor</th>
+        <th>Tipo</th><th>Proceso</th><th>Batch</th>
+        <th>Efic. Asociado</th><th>Efic. Línea</th><th>Fecha</th><th>Turno</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+  async function renderDashboard() {
+    const res = await fetch('/api/eficiencias');
+    const data = await res.json();
+
+    // 1) Pinta la tabla
+    const tbody = document.querySelector('#efTable tbody');
+    data.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.nombre_asociado}</td>
+        <td>${r.wwid}</td>
+        <td>${r.linea}</td>
+        <td>${r.supervisor}</td>
+        <td>${r.tipo_proceso}</td>
+        <td>${r.proceso}</td>
+        <td>${r.numero_batch}</td>
+        <td>${r.eficiencia_asociado.toFixed(1)}%</td>
+        <td>${(r.eficiencia_linea||0).toFixed(1)}%</td>
+        <td>${r.fecha}</td>
+        <td>${r.turno}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // 2) Prepara datos para la gráfica (por línea, promedio)
+    const grouped = {};
+    data.forEach(r => {
+      if (!grouped[r.linea]) grouped[r.linea] = [];
+      grouped[r.linea].push(r.eficiencia_asociado);
+    });
+    const labels = Object.keys(grouped);
+    const avg = labels.map(l => (
+      grouped[l].reduce((a,b)=>a+b,0)/grouped[l].length
+    ));
+
+    // 3) Dibuja el chart
+    new Chart(document.getElementById('eficienciaChart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Eficiencia Promedio por Línea (%)',
+          data: avg
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true, max: 100 }
+        }
+      }
+    });
+  }
+
+  window.onload = renderDashboard;
+  </script>
+</body>
+</html>
