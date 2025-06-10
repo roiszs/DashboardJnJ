@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 import models, schemas
 from database import SessionLocal, engine
@@ -51,3 +52,23 @@ def serve_dashboard():
 @app.get("/add.html", response_class=FileResponse)
 def serve_form():
     return "static/add.html"
+
+from sqlalchemy import func
+
+@app.get("/api/eficiencias/weekly")
+def eficiencia_semanal(db: Session = Depends(get_db)):
+    # Agrupamos por semana (YYYY-WW) y por tipo_proceso, y calculamos promedio de eficiencia_linea
+    query = (
+        db.query(
+            func.strftime("%Y-%W", models.Eficiencia.fecha).label("semana"),
+            models.Eficiencia.tipo_proceso,
+            func.avg(models.Eficiencia.eficiencia_linea).label("promedio_linea")
+        )
+        .group_by("semana", models.Eficiencia.tipo_proceso)
+        .order_by("semana")
+    )
+    results = query.all()
+    return [
+        {"semana": semana, "tipo_proceso": tp, "promedio_linea": float(prom)}
+        for semana, tp, prom in results
+    ]
