@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Agregar Eficiencia</title>
   <style>
     body { font-family: sans-serif; max-width: 600px; margin: 40px auto; }
@@ -13,25 +13,29 @@
   </style>
 </head>
 <body>
-     <!-- Botón para volver al dashboard -->
+  <!-- Navegación -->
   <button
     style="margin-bottom: 20px; padding: 8px 16px;"
     onclick="location.href='/'"
   >
     📊 Ver Dashboard
   </button>
-  
+
   <h1>Agregar Nuevo Registro</h1>
+
   <form id="efForm">
     <label>Nombre del Asociado
-      <input name="nombre_asociado" required placeholder="Nombre y primer apellido"/>
+      <input name="nombre_asociado" required placeholder="Nombre y primer apellido" />
     </label>
+
     <label>Línea
       <input name="linea" required placeholder="p.ej. L27" />
     </label>
+
     <label>Supervisor
-      <input name="supervisor" required placeholder="Nombre y apellido"/>
+      <input name="supervisor" required placeholder="Nombre y apellido" />
     </label>
+
     <label>Tipo de Proceso
       <select name="tipo_proceso" required>
         <option value="">-- seleccionar --</option>
@@ -39,30 +43,59 @@
         <option value="WD">WD</option>
       </select>
     </label>
+
     <label>Proceso (descripción)
       <input name="proceso" required placeholder="p.ej. Drill" />
     </label>
+
     <label>Eficiencia del Asociado (%)
       <input name="eficiencia_asociado" type="number" step="0.1" required />
     </label>
-    <label>Fecha
-      <input name="fecha" type="date" required />
+
+    <label>Semana del Año
+      <!-- selector de semana en lugar de fecha -->
+      <input name="semana" type="week" required />
     </label>
+
     <label>Turno
       <input name="turno" required placeholder="p.ej. 1er, 2do, 3er" />
     </label>
+
     <button type="submit">Guardar Registro</button>
   </form>
   <div class="msg" id="msg"></div>
 
   <script>
+    /**
+     * Convierte un string "YYYY-Www" en la fecha ISO (YYYY-MM-DD)
+     * correspondiente al lunes de esa semana.
+     */
+    function weekToDate(weekString) {
+      const [yearStr, weekStr] = weekString.split('-W');
+      const year = Number(yearStr), week = Number(weekStr);
+
+      // 1) Partimos del 4 de enero (base ISO)
+      const simple = new Date(Date.UTC(year, 0, 4));
+      // 2) Ajustamos al lunes de la primera semana
+      const dayOfWeek = simple.getUTCDay() || 7; // 1..7 (lun..dom)
+      simple.setUTCDate(simple.getUTCDate() + 1 - dayOfWeek);
+      // 3) Avanzamos (week - 1) semanas
+      simple.setUTCDate(simple.getUTCDate() + (week - 1) * 7);
+
+      return simple.toISOString().slice(0, 10);  // "YYYY-MM-DD"
+    }
+
     document.getElementById('efForm').onsubmit = async e => {
       e.preventDefault();
       const form = e.target;
       const data = Object.fromEntries(new FormData(form));
-      // Ajusta tipos
+
+      // Convertimos semana ("YYYY-Www") a fecha ISO (lunes de esa semana)
+      data.fecha = weekToDate(data.semana);
+      delete data.semana;
+
+      // Ajustamos tipo numérico
       data.eficiencia_asociado = Number(data.eficiencia_asociado);
-      if (data.eficiencia_linea) data.eficiencia_linea = Number(data.eficiencia_linea);
 
       try {
         const res = await fetch('/api/eficiencias', {

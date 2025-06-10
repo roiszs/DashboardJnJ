@@ -42,28 +42,24 @@
   </table>
 
   <script>
-  /**
+   /**
    * Dado un string "YYYY-MM-DD", devuelve el número de semana ISO (1–53)
    */
   function getWeekNumber(dateString) {
     const date = new Date(dateString);
-    // Asegura trabajar en UTC para ISO
     const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    // 0 = domingo, 1 = lunes... ISO semana inicia lunes
-    const dayNr = (target.getUTCDay() + 6) % 7; 
+    const dayNr = (target.getUTCDay() + 6) % 7;  // convierte domingo=0→6, lunes=1→0, etc.
     target.setUTCDate(target.getUTCDate() - dayNr + 3);
     const firstThursday = target.valueOf();
-    // Enero 1
     target.setUTCMonth(0, 1);
-    // Ajusta al primer jueves del año
     if (target.getUTCDay() !== 4) {
       target.setUTCDate(
         target.getUTCDate() + ((4 - target.getUTCDay()) + 7) % 7
       );
     }
-    const weekNumber = 1 + Math.round((firstThursday - target) / 604800000);
-    return weekNumber;
+    return 1 + Math.round((firstThursday - target) / 604800000);
   }
+
   
   async function renderDashboard() {
     const res = await fetch('/api/eficiencias');
@@ -112,7 +108,7 @@
         <td>${r.tipo_proceso}</td>
         <td>${r.proceso}</td>
         <td>${r.eficiencia_asociado.toFixed(1)}%</td>
-        <td>${r.fecha}</td>
+        <td>${getWeekNumber(r.fecha)}</td>
         <td>${r.turno}</td>
          <!-- Aquí agrega: -->
     <td>
