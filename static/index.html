@@ -34,7 +34,7 @@
       <tr>
         <th>Asociado</th><th>Línea</th><th>Supervisor</th>
         <th>Tipo</th><th>Proceso</th>
-        <th>Efic. Asociado</th><th>Fecha</th><th>Turno</th>
+        <th>Efic. Asociado</th><th>Semana</th><th>Turno</th>
         <th>Acciones</th>
       </tr>
     </thead>
@@ -42,6 +42,61 @@
   </table>
 
   <script>
+  /**
+   * Dado un string "YYYY-MM-DD", devuelve el número de semana ISO (1–53)
+   */
+  function getWeekNumber(dateString) {
+    const date = new Date(dateString);
+    // Asegura trabajar en UTC para ISO
+    const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    // 0 = domingo, 1 = lunes... ISO semana inicia lunes
+    const dayNr = (target.getUTCDay() + 6) % 7; 
+    target.setUTCDate(target.getUTCDate() - dayNr + 3);
+    const firstThursday = target.valueOf();
+    // Enero 1
+    target.setUTCMonth(0, 1);
+    // Ajusta al primer jueves del año
+    if (target.getUTCDay() !== 4) {
+      target.setUTCDate(
+        target.getUTCDate() + ((4 - target.getUTCDay()) + 7) % 7
+      );
+    }
+    const weekNumber = 1 + Math.round((firstThursday - target) / 604800000);
+    return weekNumber;
+  }
+  
+  async function renderDashboard() {
+    const res = await fetch('/api/eficiencias');
+    const data = await res.json();
+
+    const tbody = document.querySelector('#efTable tbody');
+    tbody.innerHTML = '';  // limpia previo
+    data.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.nombre_asociado}</td>
+        <td>${r.linea}</td>
+        <td>${r.supervisor}</td>
+        <td>${r.tipo_proceso}</td>
+        <td>${r.proceso}</td>
+        <td>${r.eficiencia_asociado.toFixed(1)}%</td>
+        <td>${getWeekNumber(r.fecha)}</td>
+        <td>${r.turno}</td>
+        <td>
+          <button onclick="borrarRegistro(${r.id}, this)">🗑 Eliminar</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // ... resto de renderDashboard (charts, etc.) ...
+  }
+
+  window.onload = () => {
+    renderDashboard();
+    renderWeekly();
+  };
+
   async function renderDashboard() {
     const res = await fetch('/api/eficiencias');
     const data = await res.json();
@@ -104,8 +159,6 @@
       alert("Error al eliminar el registro");
     }
   } 
-  
-  window.onload = renderDashboard;
 
   async function renderWeekly() {
   const res = await fetch('/api/eficiencias/weekly');
