@@ -161,7 +161,7 @@
   const data = await res.json();
 
   // Extraemos todas las semanas y procesos (descripciones)
-  const semanas = [...new Set(data.map(r => r.semana))].sort();
+  const semanas = [...new Set(data.map(r => r.semana))];
   const procesos = [...new Set(data.map(r => r.proceso))];
 
   // Creamos un dataset por cada descripción de proceso
