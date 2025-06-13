@@ -52,10 +52,9 @@
       <input name="eficiencia_asociado" type="number" step="0.1" required />
     </label>
 
-    <label>Semana del Año
-      <!-- selector de semana en lugar de fecha -->
-      <input name="semana" type="week" required />
-    </label>
+    <label>Semana del Año (1–53)
+  <input name="semana" type="number" min="1" max="53" required />
+</label>
 
     <label>Turno
       <input name="turno" required placeholder="p.ej. 1er, 2do, 3er" />
