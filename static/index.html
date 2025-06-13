@@ -156,36 +156,48 @@
     }
   } 
 
- async function renderWeekly() {
-  const res = await fetch('/api/eficiencias');
-  const data = await res.json();
+async function renderWeekly() {
+    // 1) Trae todos los registros
+    const res  = await fetch('/api/eficiencias');
+    const data = await res.json();
 
-  const semanas = [...new Set(data.map(r => r.semana))].sort((a,b)=>a-b);
-  const procesos = [...new Set(data.map(r => r.proceso))];
+    // 2) Extrae semanas únicas (enteros) y procesos
+    const semanas = [...new Set(data.map(r => r.semana))].sort((a, b) => a - b);
+    const procesos = [...new Set(data.map(r => r.proceso))];
 
-  const datasets = procesos.map(proc => ({
-    label: proc,
-    data: semanas.map(sem => {
-      const regs = data.filter(r => r.semana === sem && r.proceso === proc)
-                       .map(r => r.eficiencia_asociado);
-      return regs.length
-        ? regs.reduce((a,v)=>a+v,0)/regs.length
-        : 0;
-    })
-  }));
+    // 3) Para cada proceso, crea un array de promedios por semana
+    const datasets = procesos.map(proc => ({
+      label: proc,
+      data: semanas.map(sem => {
+        const regs = data
+          .filter(r => r.semana === sem && r.proceso === proc)
+          .map(r => r.eficiencia_asociado);
+        return regs.length
+          ? (regs.reduce((a, v) => a + v, 0) / regs.length).toFixed(1)
+          : 0;
+      })
+    }));
 
-  new Chart(document.getElementById('weeklyChart'), {
-    type: 'line',
-    data: { labels: semanas, datasets },
-    options: { scales: { y: { beginAtZero:true, max:100 } } }
-  });
-}
+    // 4) Dibuja con Chart.js
+    new Chart(document.getElementById('weeklyChart'), {
+      type: 'line',
+      data: {
+        labels: semanas,
+        datasets
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true, max: 100 }
+        }
+      }
+    });
+  }
 
-
-window.onload = () => {
-  renderDashboard();   // tu tabla y otros charts
-  renderWeekly();      // ahora por descripción
-};
+  window.onload = () => {
+    renderDashboard();   // tu tabla y demás charts
+    renderWeekly();      // la gráfica semanal
+  };
   </script>
 </body>
 </html>
