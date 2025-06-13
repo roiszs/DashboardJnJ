@@ -13,7 +13,7 @@
   </style>
 </head>
 <body>
-  <!-- Navegación -->
+  <!-- Botón para volver al dashboard -->
   <button
     style="margin-bottom: 20px; padding: 8px 16px;"
     onclick="location.href='/'"
@@ -53,8 +53,8 @@
     </label>
 
     <label>Semana del Año (1–53)
-  <input name="semana" type="number" min="1" max="53" required />
-</label>
+      <input name="semana" type="number" min="1" max="53" required />
+    </label>
 
     <label>Turno
       <input name="turno" required placeholder="p.ej. 1er, 2do, 3er" />
@@ -62,56 +62,43 @@
 
     <button type="submit">Guardar Registro</button>
   </form>
+
   <div class="msg" id="msg"></div>
 
   <script>
-    /**
-     * Convierte un string "YYYY-Www" en la fecha ISO (YYYY-MM-DD)
-     * correspondiente al lunes de esa semana.
-     */
-    function weekToDate(weekString) {
-      const [yearStr, weekStr] = weekString.split('-W');
-      const year = Number(yearStr), week = Number(weekStr);
+    // Encapsulamos para no contaminar el scope global
+    (function(){
+      const form = document.getElementById('efForm');
+      const msg   = document.getElementById('msg');
 
-      // 1) Partimos del 4 de enero (base ISO)
-      const simple = new Date(Date.UTC(year, 0, 4));
-      // 2) Ajustamos al lunes de la primera semana
-      const dayOfWeek = simple.getUTCDay() || 7; // 1..7 (lun..dom)
-      simple.setUTCDate(simple.getUTCDate() + 1 - dayOfWeek);
-      // 3) Avanzamos (week - 1) semanas
-      simple.setUTCDate(simple.getUTCDate() + (week - 1) * 7);
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
 
-      return simple.toISOString().slice(0, 10);  // "YYYY-MM-DD"
-    }
-  document.getElementById('efForm').onsubmit = async e => {
-  e.preventDefault();
-  const data = Object.fromEntries(new FormData(e.target));
-  data.eficiencia_asociado = Number(data.eficiencia_asociado);
-  data.semana = Number(data.semana);
+        // Recolectamos los campos
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
 
-  const res = await fetch('/api/eficiencias', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(data)
-  });
- 
+        // Convertimos los valores numéricos
+        data.eficiencia_asociado = Number(data.eficiencia_asociado);
+        data.semana = Number(data.semana);
 
-      // Ajustamos tipo numérico
-      data.eficiencia_asociado = Number(data.eficiencia_asociado);
-
-      try {
-        const res = await fetch('/api/eficiencias', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!res.ok) throw await res.text();
-        document.getElementById('msg').textContent = '✅ Registro guardado correctamente';
-        form.reset();
-      } catch(err) {
-        document.getElementById('msg').textContent = '❌ Error: ' + err;
-      }
-    };
+        try {
+          const res = await fetch('/api/eficiencias', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text);
+          }
+          msg.textContent = '✅ Registro guardado correctamente';
+          form.reset();
+        } catch(err) {
+          msg.textContent = '❌ Error: ' + err.message;
+        }
+      });
+    })();
   </script>
 </body>
 </html>
