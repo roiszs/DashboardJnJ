@@ -83,15 +83,18 @@
 
       return simple.toISOString().slice(0, 10);  // "YYYY-MM-DD"
     }
+  document.getElementById('efForm').onsubmit = async e => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  data.eficiencia_asociado = Number(data.eficiencia_asociado);
+  data.semana = Number(data.semana);
 
-    document.getElementById('efForm').onsubmit = async e => {
-      e.preventDefault();
-      const form = e.target;
-      const data = Object.fromEntries(new FormData(form));
-
-      // Convertimos semana ("YYYY-Www") a fecha ISO (lunes de esa semana)
-      data.fecha = weekToDate(data.semana);
-      delete data.semana;
+  const res = await fetch('/api/eficiencias', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  });
+ 
 
       // Ajustamos tipo numérico
       data.eficiencia_asociado = Number(data.eficiencia_asociado);
