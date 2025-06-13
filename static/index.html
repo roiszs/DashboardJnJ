@@ -76,7 +76,7 @@
         <td>${r.tipo_proceso}</td>
         <td>${r.proceso}</td>
         <td>${r.eficiencia_asociado.toFixed(1)}%</td>
-        <td>${getWeekNumber(r.fecha)}</td>
+        <td>${r.semana}</td>       <!-- Sin cálculo -->
         <td>${r.turno}</td>
         <td>
           <button onclick="borrarRegistro(${r.id}, this)">🗑 Eliminar</button>
@@ -108,7 +108,7 @@
         <td>${r.tipo_proceso}</td>
         <td>${r.proceso}</td>
         <td>${r.eficiencia_asociado.toFixed(1)}%</td>
-        <td>${getWeekNumber(r.fecha)}</td>
+        <td>${r.semana}</td>       <!-- Sin cálculo -->
         <td>${r.turno}</td>
          <!-- Aquí agrega: -->
     <td>
@@ -156,34 +156,31 @@
     }
   } 
 
-  async function renderWeekly() {
-  const res = await fetch('/api/eficiencias/weekly');
+ async function renderWeekly() {
+  const res = await fetch('/api/eficiencias');
   const data = await res.json();
 
-  // Extraemos todas las semanas y procesos (descripciones)
-  const semanas = [...new Set(data.map(r => r.semana))];
+  const semanas = [...new Set(data.map(r => r.semana))].sort((a,b)=>a-b);
   const procesos = [...new Set(data.map(r => r.proceso))];
 
-  // Creamos un dataset por cada descripción de proceso
   const datasets = procesos.map(proc => ({
     label: proc,
     data: semanas.map(sem => {
-      const rec = data.find(r => r.semana === sem && r.proceso === proc);
-      return rec ? rec.promedio_linea : 0;
+      const regs = data.filter(r => r.semana === sem && r.proceso === proc)
+                       .map(r => r.eficiencia_asociado);
+      return regs.length
+        ? regs.reduce((a,v)=>a+v,0)/regs.length
+        : 0;
     })
   }));
 
   new Chart(document.getElementById('weeklyChart'), {
     type: 'line',
     data: { labels: semanas, datasets },
-    options: {
-      responsive: true,
-      scales: {
-        y: { beginAtZero: true, max: 100 }
-      }
-    }
+    options: { scales: { y: { beginAtZero:true, max:100 } } }
   });
 }
+
 
 window.onload = () => {
   renderDashboard();   // tu tabla y otros charts
