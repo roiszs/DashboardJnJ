@@ -23,7 +23,7 @@ class EficienciaCreate(BaseModel):
     tipo_proceso: str
     proceso: str
     eficiencia_asociado: float
-    semana: int
+    semana: int           # ← en lugar de fecha
     turno: str
 
     model_config = ConfigDict(from_attributes=True)
@@ -36,6 +36,8 @@ class EficienciaCreate(BaseModel):
 
     @field_validator("linea", "proceso", "turno")
     def alfanumerico(cls, v):
-        if not re.fullmatch(r"[A-Za-z0-9 ]+", v):
+        # si quieres permitir acentos, expande el rango
+        if not re.fullmatch(r"[A-Za-zÀ-ÖØ-öø-ÿ0-9 ]+", v):
             raise ValueError("Solo se permiten letras, números y espacios")
         return v
+

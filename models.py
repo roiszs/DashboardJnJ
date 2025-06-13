@@ -12,5 +12,5 @@ class Eficiencia(Base):
     tipo_proceso        = Column(String, nullable=False, index=True)
     proceso             = Column(String, nullable=False, index=True)
     eficiencia_asociado = Column(Float, nullable=False)
-    semana              = Column(Integer, nullable=False, index=True)  # NUEVO CAMPO
+    semana              = Column(Integer, nullable=False, index=True)   # ← nuevo
     turno               = Column(String, nullable=False, index=True)
