@@ -1,6 +1,5 @@
 # schemas.py
 from pydantic import BaseModel, ConfigDict, field_validator
-from datetime import date
 from typing import Optional
 import re
 
@@ -12,7 +11,7 @@ class Eficiencia(BaseModel):
     tipo_proceso: str
     proceso: str
     eficiencia_asociado: float
-    fecha: date
+    semana: int
     turno: str
 
     model_config = ConfigDict(from_attributes=True)
@@ -24,7 +23,7 @@ class EficienciaCreate(BaseModel):
     tipo_proceso: str
     proceso: str
     eficiencia_asociado: float
-    fecha: date
+    semana: int
     turno: str
 
     model_config = ConfigDict(from_attributes=True)
