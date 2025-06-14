@@ -21,9 +21,19 @@ def get_db():
         db.close()
 
 # 3) Endpoints de tu API
+
 @app.get("/api/eficiencias", response_model=list[schemas.Eficiencia])
-def leer_eficiencias(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return db.query(models.Eficiencia).offset(skip).limit(limit).all()
+def leer_eficiencias(db: Session = Depends(get_db)):
+    # Trae los 100 registros con mayor id (los más recientes),
+    # luego invierte el orden para mostrarlos cronológicamente
+    recientes = (
+        db.query(models.Eficiencia)
+          .order_by(models.Eficiencia.id.desc())
+          .limit(100)
+          .all()
+    )
+    return list(reversed(recientes))
+
 
 @app.post("/api/eficiencias", response_model=schemas.Eficiencia, status_code=201)
 def crear_eficiencia(payload: schemas.EficienciaCreate, db: Session = Depends(get_db)):
@@ -40,6 +50,7 @@ def borrar_eficiencia(ef_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Registro no encontrado")
     db.delete(reg)
     db.commit()
+
 
 # 4) Monta los estáticos en /static
 app.mount("/static", StaticFiles(directory="static"), name="static")
