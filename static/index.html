@@ -22,6 +22,28 @@
     ➕ Agregar Registro
   </button>
 
+  <!-- Filtros -->
+  <div id="filters" style="margin-bottom: 20px;">
+  <label>Fecha inicio:
+    <input type="date" id="filterStart">
+  </label>
+  <label>Fecha fin:
+    <input type="date" id="filterEnd">
+  </label>
+  <label>Línea:
+    <select id="filterLinea">
+      <option value="">Todas</option>
+    </select>
+  </label>
+  <label>Proceso:
+    <select id="filterProceso">
+      <option value="">Todos</option>
+    </select>
+  </label>
+  <button id="applyFilters">Aplicar filtros</button>
+</div>
+
+
   <h1>Dashboard de Eficiencias</h1>
   <h2>Eficiencia Promedio Semanal por Proceso</h2>
 <canvas id="weeklyChart" width="800" height="300"></canvas>
@@ -58,6 +80,40 @@
   </table>
 
   <script>
+/** Filtros */
+    async function loadFilterOptions() {
+  const lines = await (await fetch('/api/eficiencias/lines')).json();
+  const lineSel = document.getElementById('filterLinea');
+  lines.forEach(l => {
+    const o = document.createElement('option');
+    o.value = l; o.textContent = l;
+    lineSel.appendChild(o);
+  });
+
+  const procs = await (await fetch('/api/eficiencias/processes')).json();
+  const procSel = document.getElementById('filterProceso');
+  procs.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    procSel.appendChild(o);
+  });
+}
+/** Funcion de leer filtros y generar query string*/
+function getFilterQS() {
+  const params = new URLSearchParams();
+  const s = document.getElementById('filterStart').value;
+  const e = document.getElementById('filterEnd').value;
+  const l = document.getElementById('filterLinea').value;
+  const p = document.getElementById('filterProceso').value;
+  if (s) params.append('start', s);
+  if (e) params.append('end',   e);
+  if (l) params.append('linea', l);
+  if (p) params.append('proceso', p);
+  const qs = params.toString();
+  return qs ? '?' + qs : '';
+}
+
+
    /**
    * Dado un string "YYYY-MM-DD", devuelve el número de semana ISO (1–53)
    */
