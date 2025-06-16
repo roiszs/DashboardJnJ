@@ -1,7 +1,6 @@
 # models.py
-from sqlalchemy import Column, Integer, String, Float, Date
+from sqlalchemy import Column, Integer, String, Float, Date, text
 from database import Base
-from datetime import date
 
 class Eficiencia(Base):
     __tablename__ = "eficiencias"
@@ -14,5 +13,5 @@ class Eficiencia(Base):
     proceso             = Column(String,  nullable=False, index=True)
     eficiencia_asociado = Column(Float,   nullable=False)
     semana              = Column(Integer, nullable=False, index=True)
-    fecha               = Column(Date,    nullable=False, default=date.today, index=True)
+    fecha               = Column(Date,    nullable=False, server_default=text("CURRENT_DATE"), index=True)
     turno               = Column(String,  nullable=False, index=True)
