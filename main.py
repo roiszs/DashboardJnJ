@@ -96,10 +96,6 @@ from sqlalchemy.orm import Session
 import models
 from database import SessionLocal
 
-app = FastAPI()
-def get_db():
-    db = SessionLocal();  yield db;  db.close()
-
 # Eficiencia diaria por proceso
 @app.get("/api/eficiencias/daily/process")
 def eficiencia_diaria_proceso(db: Session = Depends(get_db)):
