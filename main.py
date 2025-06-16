@@ -89,3 +89,47 @@ def eficiencia_semanal_iso(db: Session = Depends(get_db)):
     # 4) Ordénalo y devuelve
     salida.sort(key=lambda x: x["semana"])
     return salida
+
+from sqlalchemy import func
+from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
+import models
+from database import SessionLocal
+
+app = FastAPI()
+def get_db():
+    db = SessionLocal();  yield db;  db.close()
+
+# Eficiencia diaria por proceso
+@app.get("/api/eficiencias/daily/process")
+def eficiencia_diaria_proceso(db: Session = Depends(get_db)):
+    q = (
+        db.query(
+            models.Eficiencia.fecha.label("fecha"),
+            models.Eficiencia.proceso,
+            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
+        )
+        .group_by(models.Eficiencia.fecha, models.Eficiencia.proceso)
+        .order_by(models.Eficiencia.fecha)
+    )
+    return [
+        {"fecha": f.isoformat(), "proceso": p, "promedio_asociado": float(avg)}
+        for f, p, avg in q.all()
+    ]
+
+# Eficiencia diaria por línea
+@app.get("/api/eficiencias/daily/line")
+def eficiencia_diaria_linea(db: Session = Depends(get_db)):
+    q = (
+        db.query(
+            models.Eficiencia.fecha.label("fecha"),
+            models.Eficiencia.linea,
+            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
+        )
+        .group_by(models.Eficiencia.fecha, models.Eficiencia.linea)
+        .order_by(models.Eficiencia.fecha)
+    )
+    return [
+        {"fecha": f.isoformat(), "linea": l, "promedio_asociado": float(avg)}
+        for f, l, avg in q.all()
+    ]
