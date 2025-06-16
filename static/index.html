@@ -242,42 +242,49 @@ function getFilterQS() {
   } 
 
 async function renderWeekly() {
-    // 1) Trae todos los registros
-    const res = await fetch('/api/eficiencias/weekly' + getFilterQS());
-    const data = await res.json();
+  const res  = await fetch('/api/eficiencias/weekly' + getFilterQS());
+  const data = await res.json();
 
-    // 2) Extrae semanas únicas (enteros) y procesos
-    const semanas = [...new Set(data.map(r => r.semana))].sort((a, b) => a - b);
-    const procesos = [...new Set(data.map(r => r.proceso))];
+  // 1) Extrae semanas (números) y procesos
+  const semanas = [...new Set(data.map(r => r.semana))].sort((a,b)=>a-b);
+  const procesos = [...new Set(data.map(r => r.proceso))];
 
-    // 3) Para cada proceso, crea un array de promedios por semana
-    const datasets = procesos.map(proc => ({
-      label: proc,
-      data: semanas.map(sem => {
-        const regs = data
-          .filter(r => r.semana === sem && r.proceso === proc)
-          .map(r => r.eficiencia_asociado);
-        return regs.length
-          ? (regs.reduce((a, v) => a + v, 0) / regs.length).toFixed(1)
-          : 0;
-      })
-    }));
+  // 2) Dataset por proceso
+  const datasets = procesos.map(proc => ({
+    label: proc,
+    data: semanas.map(sem => {
+      const rec = data.find(r => r.semana === sem && r.proceso === proc);
+      return rec ? rec.promedio_asociado : 0;
+    })
+  }));
 
-    // 4) Dibuja con Chart.js
-    new Chart(document.getElementById('weeklyChart'), {
-      type: 'line',
-      data: {
-        labels: semanas,
-        datasets
+  // 3) Dibuja el chart con números en X
+  new Chart(document.getElementById('weeklyChart'), {
+    type: 'line',
+    data: {
+      labels: semanas,    // [4,5,...]
+      datasets
+    },
+    options: {
+      scales: {
+        x: {
+          title: { display: true, text: 'Semana del Año' },
+        },
+        y: {
+          beginAtZero: true,
+          max: 100,
+          title: { display: true, text: '%' }
+        }
       },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true, max: 100 }
+      plugins: {
+        legend: {
+          position: 'top'
         }
       }
-    });
-  }
+    }
+  });
+}
+
 
   window.onload = () => {
     renderDashboard();   // tu tabla y demás charts

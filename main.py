@@ -99,40 +99,38 @@ def serve_form():
 
 from collections import defaultdict
 
+from sqlalchemy import func
+
 @app.get("/api/eficiencias/weekly")
-def eficiencia_semanal_iso(
-    start: Optional[date] = None,
-    end:   Optional[date] = None,
-    linea: Optional[str]  = None,
-    proceso: Optional[str]= None,
+def eficiencia_semanal_por_semana(
+    start: date | None   = None,
+    end:   date | None   = None,
+    linea: str  | None   = None,
+    proceso: str| None   = None,
     db: Session = Depends(get_db)
 ):
-    # Aplica filtros igual que en leer_eficiencias
-    q = db.query(models.Eficiencia)
-    if start:
-        q = q.filter(models.Eficiencia.fecha >= start)
-    if end:
-        q = q.filter(models.Eficiencia.fecha <= end)
-    if linea:
-        q = q.filter(models.Eficiencia.linea == linea)
-    if proceso:
-        q = q.filter(models.Eficiencia.proceso == proceso)
+    # 1) Base de la query
+    q = db.query(
+        models.Eficiencia.semana.label("semana"),
+        models.Eficiencia.proceso,
+        func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
+    )
+    # 2) Si quieres aplicar filtros de fecha/linea/proceso:
+    if start:   q = q.filter(models.Eficiencia.fecha >= start)
+    if end:     q = q.filter(models.Eficiencia.fecha <= end)
+    if linea:   q = q.filter(models.Eficiencia.linea == linea)
+    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
 
-    items = q.all()
-    grupos = defaultdict(list)
-    for r in items:
-        year, week, _ = r.fecha.isocalendar()
-        grupos[(year, week, r.proceso)].append(r.eficiencia_asociado)
+    # 3) Agrupa por la columna semana en vez de la fecha
+    q = q.group_by(models.Eficiencia.semana, models.Eficiencia.proceso) \
+         .order_by(models.Eficiencia.semana)
 
-    salida = []
-    for (year, week, proc), vals in grupos.items():
-        salida.append({
-            "semana": f"{year}-{week:02d}",
-            "proceso": proc,
-            "promedio_asociado": round(sum(vals)/len(vals), 2)
-        })
-    salida.sort(key=lambda x: x["semana"])
-    return salida
+    # 4) Devuelve JSON
+    return [
+        {"semana": int(sem), "proceso": proc, "promedio_asociado": float(round(avg,2))}
+        for sem, proc, avg in q.all()
+    ]
+
 
 from sqlalchemy import func
 from fastapi import FastAPI, Depends
