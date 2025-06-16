@@ -151,3 +151,24 @@ def top_associados(limit: int = 5, db: Session = Depends(get_db)):
         {"nombre": nombre, "promedio_asociado": float(round(prom, 2))}
         for nombre, prom in q.all()
     ]
+
+from sqlalchemy import func
+
+#Eficiencia por turno
+@app.get("/api/eficiencias/shift")
+def eficiencia_por_turno(db: Session = Depends(get_db)):
+    """
+    Devuelve el promedio de eficiencia_asociado para cada turno.
+    """
+    q = (
+        db.query(
+            models.Eficiencia.turno.label("turno"),
+            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
+        )
+        .group_by(models.Eficiencia.turno)
+        .order_by(models.Eficiencia.turno)
+    )
+    return [
+        {"turno": turno, "promedio_asociado": float(round(prom, 2))}
+        for turno, prom in q.all()
+    ]

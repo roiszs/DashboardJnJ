@@ -35,6 +35,9 @@
 <h2>Top de Asociados por Eficiencia</h2>
 <canvas id="topAssocChart" width="800" height="300"></canvas>
 
+<h2>Eficiencia Promedio por Turno</h2>
+<canvas id="shiftChart" width="800" height="300"></canvas>
+
 
 <!-- Luego tu tabla existente -->
 <table id="efTable"> … </table>
@@ -289,6 +292,38 @@ window.onload = () => {
   renderDailyProcess();
   renderDailyLine();
   renderTopAssociates();  // <-- lo agregamos aquí
+};
+
+//Eficiencia por turno
+async function renderShift() {
+  const res  = await fetch('/api/eficiencias/shift');
+  const data = await res.json();
+
+  const labels = data.map(r => r.turno);
+  const valores = data.map(r => r.promedio_asociado);
+
+  new Chart(document.getElementById('shiftChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Eficiencia Asociado (%)', data: valores }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true, max: 100 }
+      }
+    }
+  });
+}
+
+// Y no olvides llamarlo:
+window.onload = () => {
+  renderDashboard();
+  renderWeekly();
+  renderDailyProcess();
+  renderDailyLine();
+  renderTopAssociates();
+  renderShift();   // <-- aquí
 };
 
 
