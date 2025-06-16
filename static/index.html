@@ -134,7 +134,7 @@ function getFilterQS() {
 
   
   async function renderDashboard() {
-    const res = await fetch('/api/eficiencias');
+    const res = await fetch('/api/eficiencias' + getFilterQS());
     const data = await res.json();
 
     const tbody = document.querySelector('#efTable tbody');
@@ -166,7 +166,7 @@ function getFilterQS() {
   };
 
   async function renderDashboard() {
-    const res = await fetch('/api/eficiencias');
+    const res = await fetch('/api/eficiencias' + getFilterQS());
     const data = await res.json();
 
     // 1) Pinta la tabla
@@ -230,7 +230,7 @@ function getFilterQS() {
 
 async function renderWeekly() {
     // 1) Trae todos los registros
-    const res  = await fetch('/api/eficiencias');
+    const res = await fetch('/api/eficiencias/weekly' + getFilterQS());
     const data = await res.json();
 
     // 2) Extrae semanas únicas (enteros) y procesos
@@ -422,16 +422,31 @@ window.onload = () => {
   });
 }
 
-// Llama a esta función al cargar
-window.onload = () => {
+window.onload = async () => {
+  await loadFilterOptions();     // carga select
+  document.getElementById('applyFilters')
+          .addEventListener('click', () => {
+    // al aplicar filtros, re-renderizamos todo:
+    renderDashboard();
+    renderWeekly();
+    // si quieres también los diarios u otras métricas:
+    renderDailyProcess();
+    renderDailyLine();
+    renderTopAssociates();
+    renderShift();
+    renderCounts();
+  });
+
+  // render inicial sin filtros
   renderDashboard();
   renderWeekly();
   renderDailyProcess();
   renderDailyLine();
   renderTopAssociates();
   renderShift();
-  renderCounts();    // << aquí
+  renderCounts();
 };
+
 
 
   </script>
