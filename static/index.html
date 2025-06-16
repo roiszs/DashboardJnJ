@@ -5,79 +5,92 @@
   <title>Dashboard de Eficiencias</title>
   <!-- Chart.js desde CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body { font-family: sans-serif; margin: 20px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #f4f4f4; }
-  </style>
+  <link rel="stylesheet" href="/static/style.css">
+
 </head>
 
 <body>
-     <!-- Botón para ir al formulario -->
-  <button
-    style="margin-bottom: 20px; padding: 8px 16px;"
-    onclick="location.href='/add.html'"
-  >
-    ➕ Agregar Registro
-  </button>
+  <body>
+  <div class="container">
 
-  <!-- Filtros -->
-  <div id="filters" style="margin-bottom: 20px;">
-  <label>Fecha inicio:
-    <input type="date" id="filterStart">
-  </label>
-  <label>Fecha fin:
-    <input type="date" id="filterEnd">
-  </label>
-  <label>Línea:
-    <select id="filterLinea">
-      <option value="">Todas</option>
-    </select>
-  </label>
-  <label>Proceso:
-    <select id="filterProceso">
-      <option value="">Todos</option>
-    </select>
-  </label>
-  <button id="applyFilters">Aplicar filtros</button>
-</div>
+    <h1>Dashboard de Eficiencias</h1>
 
+    <!-- Filtros -->
+    <div id="filters">
+      <label>Fecha inicio:
+        <input type="date" id="filterStart">
+      </label>
+      <label>Fecha fin:
+        <input type="date" id="filterEnd">
+      </label>
+      <label>Línea:
+        <select id="filterLinea">
+          <option value="">Todas</option>
+        </select>
+      </label>
+      <label>Proceso:
+        <select id="filterProceso">
+          <option value="">Todos</option>
+        </select>
+      </label>
+      <button id="applyFilters">Aplicar filtros</button>
+    </div>
 
-  <h1>Dashboard de Eficiencias</h1>
-  <h2>Eficiencia Promedio Semanal por Proceso</h2>
-<canvas id="weeklyChart" width="800" height="300"></canvas>
+    <!-- Botón para agregar registro -->
+    <button class="nav-btn" onclick="location.href='/add.html'">
+      ➕ Agregar Registro
+    </button>
 
-<h2>Eficiencia Diaria por Proceso</h2>
-<canvas id="dailyProcessChart" width="800" height="300"></canvas>
+    <!-- Gráficas en grid -->
+    <div class="dashboard-grid">
+      <section>
+        <h2>Eficiencia Semanal por Proceso</h2>
+        <canvas id="weeklyChart" width="800" height="300"></canvas>
+      </section>
+      <section>
+        <h2>Eficiencia Diaria por Proceso</h2>
+        <canvas id="dailyProcessChart" width="800" height="300"></canvas>
+      </section>
+      <section>
+        <h2>Eficiencia Diaria por Línea</h2>
+        <canvas id="dailyLineChart" width="800" height="300"></canvas>
+      </section>
+      <section>
+        <h2>Top de Asociados por Eficiencia</h2>
+        <canvas id="topAssocChart" width="800" height="300"></canvas>
+      </section>
+      <section>
+        <h2>Eficiencia Promedio por Turno</h2>
+        <canvas id="shiftChart" width="800" height="300"></canvas>
+      </section>
+      <section>
+        <h2>Conteo de SW vs WD por Línea</h2>
+        <canvas id="countChart" width="800" height="300"></canvas>
+      </section>
+    </div>
 
-<h2>Eficiencia Diaria por Línea</h2>
-<canvas id="dailyLineChart" width="800" height="300"></canvas>
+    <!-- Tabla de registros -->
+    <h2>Registros Recientes</h2>
+    <table id="efTable">
+      <thead>
+        <tr>
+          <th>Asociado</th>
+          <th>Línea</th>
+          <th>Supervisor</th>
+          <th>Tipo</th>
+          <th>Proceso</th>
+          <th>Efic. Asociado</th>
+          <th>Semana</th>
+          <th>Turno</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-<h2>Top de Asociados por Eficiencia</h2>
-<canvas id="topAssocChart" width="800" height="300"></canvas>
+  </div>
+</body>
 
-<h2>Eficiencia Promedio por Turno</h2>
-<canvas id="shiftChart" width="800" height="300"></canvas>
-
-<h2>Conteo de SW vs WD por Línea</h2>
-<canvas id="countChart" width="800" height="300"></canvas>
-
-
-<!-- Luego tu tabla existente -->
-<table id="efTable"> … </table>
-  <canvas id="eficienciaChart" width="800" height="300"></canvas>
-  <table id="efTable">
-    <thead>
-      <tr>
-        <th>Asociado</th><th>Línea</th><th>Supervisor</th>
-        <th>Tipo</th><th>Proceso</th>
-        <th>Efic. Asociado</th><th>Semana</th><th>Turno</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
 
   <script>
 /** Filtros */
