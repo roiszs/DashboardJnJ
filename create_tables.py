@@ -1,7 +1,8 @@
 # create_tables.py
 from database import engine, Base
-import models  # esto importa todas las clases que heredan de Base
+import models  # importa tu modelo actualizado
 
-# Crea el archivo eficiencias.db y las tablas según tu modelo
+# Esto borra la BD en memoria y crea TODO de nuevo:
+Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
-print("Tablas creadas correctamente.")
+print("🗄️  Base recreada con columna fecha.")
