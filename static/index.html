@@ -26,6 +26,13 @@
   <h2>Eficiencia Promedio Semanal por Proceso</h2>
 <canvas id="weeklyChart" width="800" height="300"></canvas>
 
+<h2>Eficiencia Diaria por Proceso</h2>
+<canvas id="dailyProcessChart" width="800" height="300"></canvas>
+
+<h2>Eficiencia Diaria por Línea</h2>
+<canvas id="dailyLineChart" width="800" height="300"></canvas>
+
+
 <!-- Luego tu tabla existente -->
 <table id="efTable"> … </table>
   <canvas id="eficienciaChart" width="800" height="300"></canvas>
@@ -198,6 +205,54 @@ async function renderWeekly() {
     renderDashboard();   // tu tabla y demás charts
     renderWeekly();      // la gráfica semanal
   };
+
+  async function renderDailyProcess() {
+  const data = await (await fetch('/api/eficiencias/daily/process')).json();
+  const fechas   = [...new Set(data.map(r => r.fecha))];
+  const procesos = [...new Set(data.map(r => r.proceso))];
+
+  const datasets = procesos.map(proc => ({
+    label: proc,
+    data: fechas.map(fecha => {
+      const rec = data.find(r => r.fecha === fecha && r.proceso === proc);
+      return rec ? rec.promedio_asociado : 0;
+    })
+  }));
+
+  new Chart(document.getElementById('dailyProcessChart'), {
+    type: 'line',
+    data: { labels: fechas, datasets },
+    options: { scales: { y: { beginAtZero: true, max: 100 } } }
+  });
+}
+
+async function renderDailyLine() {
+  const data = await (await fetch('/api/eficiencias/daily/line')).json();
+  const fechas = [...new Set(data.map(r => r.fecha))];
+  const lineas = [...new Set(data.map(r => r.linea))];
+
+  const datasets = lineas.map(linea => ({
+    label: linea,
+    data: fechas.map(fecha => {
+      const rec = data.find(r => r.fecha === fecha && r.linea === linea);
+      return rec ? rec.promedio_asociado : 0;
+    })
+  }));
+
+  new Chart(document.getElementById('dailyLineChart'), {
+    type: 'line',
+    data: { labels: fechas, datasets },
+    options: { scales: { y: { beginAtZero: true, max: 100 } } }
+  });
+}
+
+window.onload = () => {
+  renderDashboard();
+  renderWeekly();
+  renderDailyProcess();
+  renderDailyLine();
+};
+
   </script>
 </body>
 </html>
