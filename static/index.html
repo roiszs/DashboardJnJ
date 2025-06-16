@@ -38,6 +38,9 @@
 <h2>Eficiencia Promedio por Turno</h2>
 <canvas id="shiftChart" width="800" height="300"></canvas>
 
+<h2>Conteo de SW vs WD por Línea</h2>
+<canvas id="countChart" width="800" height="300"></canvas>
+
 
 <!-- Luego tu tabla existente -->
 <table id="efTable"> … </table>
@@ -324,6 +327,54 @@ window.onload = () => {
   renderDailyLine();
   renderTopAssociates();
   renderShift();   // <-- aquí
+};
+
+//WD & SW
+ async function renderCounts() {
+  // 1) Llama al endpoint
+  const data = await (await fetch('/api/eficiencias/counts')).json();
+
+  // 2) Extrae líneas únicas y prepara conteos
+  const lineas = [...new Set(data.map(r => r.linea))];
+  // Inicializamos conteos a cero
+  const swCounts = lineas.map(() => 0);
+  const wdCounts = lineas.map(() => 0);
+
+  // 3) Rellena los arrays
+  data.forEach(r => {
+    const idx = lineas.indexOf(r.linea);
+    if (r.tipo_proceso === 'SW') swCounts[idx] = r.count;
+    else if (r.tipo_proceso === 'WD') wdCounts[idx] = r.count;
+  });
+
+  // 4) Dibuja un chart de barras agrupadas
+  new Chart(document.getElementById('countChart'), {
+    type: 'bar',
+    data: {
+      labels: lineas,
+      datasets: [
+        { label: 'SW', data: swCounts },
+        { label: 'WD', data: wdCounts }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+// Llama a esta función al cargar
+window.onload = () => {
+  renderDashboard();
+  renderWeekly();
+  renderDailyProcess();
+  renderDailyLine();
+  renderTopAssociates();
+  renderShift();
+  renderCounts();    // << aquí
 };
 
 
