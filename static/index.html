@@ -32,6 +32,9 @@
 <h2>Eficiencia Diaria por Línea</h2>
 <canvas id="dailyLineChart" width="800" height="300"></canvas>
 
+<h2>Top de Asociados por Eficiencia</h2>
+<canvas id="topAssocChart" width="800" height="300"></canvas>
+
 
 <!-- Luego tu tabla existente -->
 <table id="efTable"> … </table>
@@ -252,6 +255,42 @@ window.onload = () => {
   renderDailyProcess();
   renderDailyLine();
 };
+
+async function renderTopAssociates() {
+  // 1) Traemos el top 5 (o el que quieras con ?limit=10)
+  const res  = await fetch('/api/eficiencias/top-associates?limit=5');
+  const data = await res.json();
+
+  // 2) Extraemos nombres y valores
+  const labels = data.map(r => r.nombre);
+  const valores = data.map(r => r.promedio_asociado);
+
+  // 3) Dibujamos un bar chart
+  new Chart(document.getElementById('topAssocChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Eficiencia Asociado (%)',
+        data: valores
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true, max: 100 }
+      }
+    }
+  });
+}
+
+window.onload = () => {
+  renderDashboard();
+  renderWeekly();
+  renderDailyProcess();
+  renderDailyLine();
+  renderTopAssociates();  // <-- lo agregamos aquí
+};
+
 
   </script>
 </body>
