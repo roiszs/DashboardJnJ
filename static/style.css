@@ -164,18 +164,3 @@ button.nav-btn:hover {
 .btn-primary:hover {
   background: var(--accent);
 }
-/* Si quieres centrarlo también verticalmente en pantallas grandes: */
-@media (min-width: 600px) {
-  body {
-    display: flex;
-    align-items: center;      /* centra vertical */
-    justify-content: center;  /* centra horizontal */
-    min-height: 100vh;        /* altura completa de la ventana */
-  }
-  
-  /* Evita el padding grande del container en mobile */
-  .container {
-    padding: 0;
-    max-width: none;
-  }
-}
