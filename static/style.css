@@ -1,10 +1,10 @@
 /* Paleta básica */
 :root {
-  --primary: #2c3e50;
-  --secondary: #2980b9;
-  --accent: #e67e22;
+  --primary: #a90303;
+  --secondary: #ea0a0a;
+  --accent: #e03b25;
   --bg-light: #f4f7fa;
-  --text: #34495e;
+  --text: #9d0a0a;
 }
 
 /* Reinicio ligero y tipografía */
