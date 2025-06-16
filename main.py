@@ -6,6 +6,9 @@ from sqlalchemy import func
 from collections import defaultdict
 import models, schemas
 from database import SessionLocal, engine
+from datetime import date
+from typing import Optional
+
 
 # 1) Crea las tablas
 models.Base.metadata.create_all(bind=engine)
@@ -23,16 +26,46 @@ def get_db():
 # 3) Endpoints de tu API
 
 @app.get("/api/eficiencias", response_model=list[schemas.Eficiencia])
-def leer_eficiencias(db: Session = Depends(get_db)):
-    # Trae los 100 registros con mayor id (los más recientes),
-    # luego invierte el orden para mostrarlos cronológicamente
+def leer_eficiencias(
+    start: Optional[date] = None,
+    end:   Optional[date] = None,
+    linea: Optional[str]  = None,
+    proceso: Optional[str]= None,
+    db: Session = Depends(get_db)
+):
+    q = db.query(models.Eficiencia)
+    if start:
+        q = q.filter(models.Eficiencia.fecha >= start)
+    if end:
+        q = q.filter(models.Eficiencia.fecha <= end)
+    if linea:
+        q = q.filter(models.Eficiencia.linea == linea)
+    if proceso:
+        q = q.filter(models.Eficiencia.proceso == proceso)
+
     recientes = (
-        db.query(models.Eficiencia)
-          .order_by(models.Eficiencia.id.desc())
-          .limit(100)
-          .all()
+        q.order_by(models.Eficiencia.id.desc())
+         .limit(100)
+         .all()
     )
     return list(reversed(recientes))
+
+#Select de filtros
+@app.get("/api/eficiencias/lines")
+def get_lines(db: Session = Depends(get_db)):
+    rows = db.query(models.Eficiencia.linea)\
+             .distinct()\
+             .order_by(models.Eficiencia.linea)\
+             .all()
+    return [r[0] for r in rows]
+
+@app.get("/api/eficiencias/processes")
+def get_processes(db: Session = Depends(get_db)):
+    rows = db.query(models.Eficiencia.proceso)\
+             .distinct()\
+             .order_by(models.Eficiencia.proceso)\
+             .all()
+    return [r[0] for r in rows]
 
 
 @app.post("/api/eficiencias", response_model=schemas.Eficiencia, status_code=201)
@@ -67,26 +100,37 @@ def serve_form():
 from collections import defaultdict
 
 @app.get("/api/eficiencias/weekly")
-def eficiencia_semanal_iso(db: Session = Depends(get_db)):
-    # 1) Trae todos los registros
-    items = db.query(models.Eficiencia).all()
+def eficiencia_semanal_iso(
+    start: Optional[date] = None,
+    end:   Optional[date] = None,
+    linea: Optional[str]  = None,
+    proceso: Optional[str]= None,
+    db: Session = Depends(get_db)
+):
+    # Aplica filtros igual que en leer_eficiencias
+    q = db.query(models.Eficiencia)
+    if start:
+        q = q.filter(models.Eficiencia.fecha >= start)
+    if end:
+        q = q.filter(models.Eficiencia.fecha <= end)
+    if linea:
+        q = q.filter(models.Eficiencia.linea == linea)
+    if proceso:
+        q = q.filter(models.Eficiencia.proceso == proceso)
 
-    # 2) Agrupa por (año, semana ISO, proceso) y acumula eficiencias de asociados
+    items = q.all()
     grupos = defaultdict(list)
     for r in items:
-        year, week, _ = r.fecha.isocalendar()  # ISO-week
+        year, week, _ = r.fecha.isocalendar()
         grupos[(year, week, r.proceso)].append(r.eficiencia_asociado)
 
-    # 3) Construye la salida con promedio
     salida = []
-    for (year, week, proceso), vals in grupos.items():
+    for (year, week, proc), vals in grupos.items():
         salida.append({
-            "semana": f"{year}-{week:02d}",           # ej. "2025-04"
-            "proceso": proceso,
+            "semana": f"{year}-{week:02d}",
+            "proceso": proc,
             "promedio_asociado": round(sum(vals)/len(vals), 2)
         })
-
-    # 4) Ordénalo y devuelve
     salida.sort(key=lambda x: x["semana"])
     return salida
 
