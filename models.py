@@ -16,3 +16,4 @@ class Eficiencia(Base):
     semana              = Column(Integer, nullable=False, index=True)
     fecha               = Column(Date,    nullable=False, default=date.today, index=True)
     turno               = Column(String,  nullable=False, index=True)
+    piezas              = Column(Integer, nullable=False, default=1)

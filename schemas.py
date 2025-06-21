@@ -13,6 +13,7 @@ class Eficiencia(BaseModel):
     eficiencia_asociado: float
     semana: int
     turno: str
+    piezas: int  
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -25,6 +26,7 @@ class EficienciaCreate(BaseModel):
     eficiencia_asociado: float
     semana: int           # ← en lugar de fecha
     turno: str
+    piezas: int   
 
     model_config = ConfigDict(from_attributes=True)
 
