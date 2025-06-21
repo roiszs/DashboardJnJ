@@ -69,6 +69,11 @@
         <canvas id="countChart" width="800" height="300"></canvas>
       </section>
     </div>
+    <section>
+    <h2>Tiempo Muerto Semanal por Línea</h2>
+    <canvas id="downtimeChart" width="800" height="300"></canvas>
+    </section>
+
 
     <!-- Tabla de registros -->
     <h2>Registros Recientes</h2>
@@ -460,6 +465,64 @@ window.onload = async () => {
   renderTopAssociates();
   renderShift();
   renderCounts();
+};
+ async function renderDowntime() {
+  const qs   = getFilterQS();
+  const data = await (await fetch('/api/eficiencias/weekly/downtime' + qs)).json();
+
+  // extrae semanas y líneas
+  const semanas = [...new Set(data.map(r => r.semana))].sort((a,b)=>a-b);
+  const lineas  = [...new Set(data.map(r => r.linea))];
+
+  // construye un dataset por línea
+  const datasets = lineas.map(line => ({
+    label: line,
+    data: semanas.map(sem => {
+      const rec = data.find(r => r.semana===sem && r.linea===line);
+      return rec ? rec.avg_downtime : 0;
+    }),
+    tension: 0.3,         // línea suavizada
+    pointRadius: 4
+  }));
+
+  new Chart(document.getElementById('downtimeChart'), {
+    type: 'line',
+    data: { labels: semanas, datasets },
+    options: {
+      scales: {
+        x: { title: { display: true, text: 'Semana' } },
+        y: { beginAtZero: true, title: { display: true, text: 'Minutos perdidos' } }
+      },
+      plugins: {
+        legend: { position: 'top' }
+      }
+    }
+  });
+}
+
+// y en la carga:
+window.onload = () => {
+  loadFilterOptions();
+  document.getElementById('applyFilters')
+          .addEventListener('click', () => {
+    renderDashboard();
+    renderWeekly();
+    renderDailyProcess();
+    renderDailyLine();
+    renderWorstAssociates();
+    renderShift();
+    renderCounts();
+    renderDowntime(); // <<---
+  });
+  // render inicial:
+  renderDashboard();
+  renderWeekly();
+  renderDailyProcess();
+  renderDailyLine();
+  renderWorstAssociates();
+  renderShift();
+  renderCounts();
+  renderDowntime();   // <<---
 };
 
 
