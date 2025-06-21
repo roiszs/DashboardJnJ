@@ -407,41 +407,35 @@ window.onload = () => {
 };
 
 //WD & SW
- async function renderCounts() {
-  // 1) Llama al endpoint
+async function renderCounts() {
   const data = await (await fetch('/api/eficiencias/counts')).json();
 
-  // 2) Extrae líneas únicas y prepara conteos
   const lineas = [...new Set(data.map(r => r.linea))];
-  // Inicializamos conteos a cero
   const swCounts = lineas.map(() => 0);
   const wdCounts = lineas.map(() => 0);
 
-  // 3) Rellena los arrays
   data.forEach(r => {
     const idx = lineas.indexOf(r.linea);
-    if (r.tipo_proceso === 'SW') swCounts[idx] = r.count;
-    else if (r.tipo_proceso === 'WD') wdCounts[idx] = r.count;
+    if (r.tipo_proceso === 'SW') swCounts[idx] = r.total_piezas;
+    else if (r.tipo_proceso === 'WD') wdCounts[idx] = r.total_piezas;
   });
 
-  // 4) Dibuja un chart de barras agrupadas
   new Chart(document.getElementById('countChart'), {
     type: 'bar',
     data: {
       labels: lineas,
       datasets: [
-        { label: 'SW', data: swCounts },
-        { label: 'WD', data: wdCounts }
+        { label: 'SW (piezas)', data: swCounts },
+        { label: 'WD (piezas)', data: wdCounts }
       ]
     },
     options: {
       responsive: true,
-      scales: {
-        y: { beginAtZero: true }
-      }
+      scales: { y: { beginAtZero: true } }
     }
   });
 }
+
 
 window.onload = async () => {
   await loadFilterOptions();     // carga select

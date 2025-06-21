@@ -215,22 +215,21 @@ def eficiencia_por_turno(db: Session = Depends(get_db)):
 
 from sqlalchemy import func
 
-#Eficiencia por SW & WD
 @app.get("/api/eficiencias/counts")
 def conteo_sw_wd_por_linea(db: Session = Depends(get_db)):
     """
-    Devuelve, para cada línea, cuántos registros de tipo_proceso SW y WD hay.
+    Para cada línea, suma las piezas producidas por SW y WD.
     """
     q = (
         db.query(
             models.Eficiencia.linea.label("linea"),
             models.Eficiencia.tipo_proceso.label("tipo_proceso"),
-            func.count().label("count")
+            func.sum(models.Eficiencia.piezas).label("total_piezas")
         )
         .group_by(models.Eficiencia.linea, models.Eficiencia.tipo_proceso)
         .order_by(models.Eficiencia.linea)
     )
     return [
-        {"linea": linea, "tipo_proceso": tp, "count": cnt}
-        for linea, tp, cnt in q.all()
+        {"linea": linea, "tipo_proceso": tp, "total_piezas": int(tpiezas)}
+        for linea, tp, tpiezas in q.all()
     ]

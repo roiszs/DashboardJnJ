@@ -43,6 +43,12 @@
       </div>
 
       <div class="form-group">
+  <label>Piezas Producidas</label>
+  <input name="piezas" type="number" min="1" step="1" required placeholder="p.ej. 500" />
+</div>
+
+
+      <div class="form-group">
         <label>Proceso (descripción)</label>
         <input name="proceso" required placeholder="p.ej. Drill" />
       </div>
@@ -84,6 +90,10 @@
         // Convertimos los valores numéricos
         data.eficiencia_asociado = Number(data.eficiencia_asociado);
         data.semana = Number(data.semana);
+
+        // tras convertir eficiencia_asociado y semana:
+        data.piezas = Number(data.piezas);
+
 
         try {
           const res = await fetch('/api/eficiencias', {
