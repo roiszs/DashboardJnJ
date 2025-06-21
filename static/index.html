@@ -57,6 +57,7 @@
       </section>
       <section>
         <h2>Top de Asociados por Eficiencia</h2>
+        <h2>Top 5 de asociados con peor eficiencia</h2>
         <canvas id="topAssocChart" width="800" height="300"></canvas>
       </section>
       <section>
@@ -353,7 +354,7 @@ async function renderTopAssociates() {
     data: {
       labels,
       datasets: [{
-        label: 'Eficiencia Asociado (%)',
+        label: 'Eficiencia Asociado (%) (más bajo primero)',
         data: valores
       }]
     },
