@@ -71,7 +71,7 @@
         <!-- …otros form-groups… -->
     <div class="form-group">
     <label>Tiempo Muerto (minutos)</label>
-    <input name="tiempo_muerto" type="number" min="0" step="0.1" required placeholder="p.ej. 15.5" />
+    <input name="tiempo_muerto" type="number" min="0" step="0.1"placeholder="p.ej. 15.5 (opcional)" />
     </div>
     <button type="submit" class="btn-primary">Guardar Registro</button>
 
@@ -99,7 +99,9 @@
 
         // tras convertir eficiencia_asociado y semana:
         data.piezas = Number(data.piezas);
-        data.tiempo_muerto = Number(data.tiempo_muerto);
+        data.tiempo_muerto = data.tiempo_muerto
+      Number(data.tiempo_muerto)
+       0.0;
 
 
         try {
