@@ -69,11 +69,21 @@ h1, h2 {
   gap: 40px;
   margin-bottom: 40px;
 }
-@media(min-width: 768px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr 1fr;
+
+
+@media(min-width:600px){
+  body.add-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  body.add-page .container {
+    padding: 0;
+    max-width: none;
   }
 }
+
 
 /* Table styling */
 table {
