@@ -68,7 +68,13 @@
         <input name="turno" required placeholder="p.ej. 1er, 2do, 3er" />
       </div>
 
-      <button type="submit" class="btn-primary">Guardar Registro</button>
+        <!-- …otros form-groups… -->
+    <div class="form-group">
+    <label>Tiempo Muerto (minutos)</label>
+    <input name="tiempo_muerto" type="number" min="0" step="0.1" required placeholder="p.ej. 15.5" />
+    </div>
+    <button type="submit" class="btn-primary">Guardar Registro</button>
+
     </form>
 
     <div class="msg" id="msg"></div>
@@ -93,6 +99,7 @@
 
         // tras convertir eficiencia_asociado y semana:
         data.piezas = Number(data.piezas);
+        data.tiempo_muerto = Number(data.tiempo_muerto);
 
 
         try {

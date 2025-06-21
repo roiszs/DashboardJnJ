@@ -233,3 +233,36 @@ def conteo_sw_wd_por_linea(db: Session = Depends(get_db)):
         {"linea": linea, "tipo_proceso": tp, "total_piezas": int(tpiezas)}
         for linea, tp, tpiezas in q.all()
     ]
+
+
+@app.get("/api/eficiencias/weekly/downtime")
+def downtime_weekly_by_line(
+    start: date | None   = None,
+    end:   date | None   = None,
+    linea: str  | None   = None,
+    proceso: str| None   = None,
+    db: Session = Depends(get_db)
+):
+    # Base de la query: sumar tiempo_muerto
+    q = db.query(
+        models.Eficiencia.semana.label("semana"),
+        models.Eficiencia.linea.label("linea"),
+        func.avg(models.Eficiencia.tiempo_muerto).label("avg_downtime")
+    )
+    # filtros opcionales
+    if start:   q = q.filter(models.Eficiencia.fecha >= start)
+    if end:     q = q.filter(models.Eficiencia.fecha <= end)
+    if linea:   q = q.filter(models.Eficiencia.linea == linea)
+    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
+
+    q = q.group_by(models.Eficiencia.semana, models.Eficiencia.linea) \
+         .order_by(models.Eficiencia.semana)
+
+    return [
+        {
+          "semana": int(sem),
+          "linea": line,
+          "avg_downtime": float(round(dt,2))
+        }
+        for sem, line, dt in q.all()
+    ]
