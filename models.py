@@ -17,3 +17,4 @@ class Eficiencia(Base):
     fecha               = Column(Date,    nullable=False, default=date.today, index=True)
     turno               = Column(String,  nullable=False, index=True)
     piezas              = Column(Integer, nullable=False, default=1)
+    tiempo_muerto       = Column(Float,   nullable=False, default=0.0, index=True)
