@@ -174,25 +174,23 @@ def eficiencia_diaria_linea(db: Session = Depends(get_db)):
 
 from sqlalchemy import func
 
-#Top Asociados
+#topAsociadospEORES
 @app.get("/api/eficiencias/top-associates")
-def top_associados(limit: int = 5, db: Session = Depends(get_db)):
-    """
-    Devuelve los top `limit` asociados ordenados por eficiencia_asociado promedio descendente.
-    """
+def worst_associados(limit: int = 5, db: Session = Depends(get_db)):
     q = (
         db.query(
             models.Eficiencia.nombre_asociado.label("nombre"),
             func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
         )
         .group_by(models.Eficiencia.nombre_asociado)
-        .order_by(func.avg(models.Eficiencia.eficiencia_asociado).desc())
+        .order_by(func.avg(models.Eficiencia.eficiencia_asociado).asc())   # <<< ascendente
         .limit(limit)
     )
     return [
         {"nombre": nombre, "promedio_asociado": float(round(prom, 2))}
         for nombre, prom in q.all()
     ]
+
 
 from sqlalchemy import func
 
