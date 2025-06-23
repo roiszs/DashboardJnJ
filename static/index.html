@@ -99,6 +99,27 @@
 
 
   <script>
+
+    async function safeRender(fn) {
+  try { await fn() }
+  catch(e) { console.error(`Error en ${fn.name}:`, e) }
+}
+
+async function renderAll() {
+  await safeRender(renderDashboard);
+  await safeRender(renderWeekly);
+  // …
+  await safeRender(renderTopAssociates);  // o renderTopAssociates
+  // …
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadFilterOptions();
+  document.getElementById('applyFilters')
+          .addEventListener('click', renderAll);
+  renderAll();
+});
+ 
 /** Filtros */
     async function loadFilterOptions() {
   const lines = await (await fetch('/api/eficiencias/lines')).json();
