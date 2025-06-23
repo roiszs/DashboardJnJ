@@ -172,39 +172,6 @@ function getFilterQS() {
     return 1 + Math.round((firstThursday - target) / 604800000);
   }
 
-  
-  async function renderDashboard() {
-    const res = await fetch('/api/eficiencias' + getFilterQS());
-    const data = await res.json();
-
-    const tbody = document.querySelector('#efTable tbody');
-    tbody.innerHTML = '';  // limpia previo
-    data.forEach(r => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${r.nombre_asociado}</td>
-        <td>${r.linea}</td>
-        <td>${r.supervisor}</td>
-        <td>${r.tipo_proceso}</td>
-        <td>${r.proceso}</td>
-        <td>${r.eficiencia_asociado.toFixed(1)}%</td>
-        <td>${r.semana}</td>       <!-- Sin cálculo -->
-        <td>${r.turno}</td>
-        <td>
-          <button onclick="borrarRegistro(${r.id}, this)">🗑 Eliminar</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    // ... resto de renderDashboard (charts, etc.) ...
-  }
-
-  window.onload = () => {
-    renderDashboard();
-    renderWeekly();
-  };
-
   async function renderDashboard() {
     const res = await fetch('/api/eficiencias' + getFilterQS());
     const data = await res.json();
