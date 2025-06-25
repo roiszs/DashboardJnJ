@@ -94,6 +94,42 @@
     </table>
 
   </div>
+  <script>
+    // Helpers idénticos a los que te compartí…
+    async function safeRender(fn){ try{await fn()}catch(e){console.error(fn.name,e)} }
+    function getFilterQS(){ /*…igual…*/ }
+    async function loadFilterOptions(){ /*…igual…*/ }
+  
+    // renderDashboard() —con tbody.innerHTML=''—
+    async function renderDashboard(){ /*…igual…*/ }
+  
+    async function renderWeekly(){ /*…igual…*/ }
+    async function renderDailyProcess(){ /*…igual…*/ }
+    async function renderDailyLine(){ /*…igual…*/ }
+    async function renderWorstAssociates(){ /*…igual…*/ }
+    async function renderShift(){ /*…igual…*/ }
+    async function renderCounts(){ /*…igual…*/ }
+    async function renderDowntime(){ /*…igual…*/ }
+  
+    async function renderAll(){
+      await safeRender(renderDashboard);
+      await safeRender(renderWeekly);
+      await safeRender(renderDailyProcess);
+      await safeRender(renderDailyLine);
+      await safeRender(renderWorstAssociates);
+      await safeRender(renderShift);
+      await safeRender(renderCounts);
+      await safeRender(renderDowntime);
+    }
+  
+    window.addEventListener('DOMContentLoaded', async()=>{
+      await loadFilterOptions();
+      document.getElementById('applyFilters')
+              .addEventListener('click', renderAll);
+      renderAll();
+    });
+  </script>
+  
 </body>
 
 
