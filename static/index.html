@@ -98,86 +98,53 @@
 </body>
 
 
-  <script>
-
-    async function safeRender(fn) {
-  try { await fn() }
-  catch(e) { console.error(`Error en ${fn.name}:`, e) }
-}
-
-async function renderAll() {
-  await safeRender(renderDashboard);
-  await safeRender(renderWeekly);
-  // …
-  await safeRender(renderTopAssociates);  // o renderTopAssociates
-  // …
-}
-
-window.addEventListener('DOMContentLoaded', async () => {
-  await loadFilterOptions();
-  document.getElementById('applyFilters')
-          .addEventListener('click', renderAll);
-  renderAll();
-});
- 
-/** Filtros */
-    async function loadFilterOptions() {
-  const lines = await (await fetch('/api/eficiencias/lines')).json();
-  const lineSel = document.getElementById('filterLinea');
-  lines.forEach(l => {
-    const o = document.createElement('option');
-    o.value = l; o.textContent = l;
-    lineSel.appendChild(o);
-  });
-
-  const procs = await (await fetch('/api/eficiencias/processes')).json();
-  const procSel = document.getElementById('filterProceso');
-  procs.forEach(p => {
-    const o = document.createElement('option');
-    o.value = p; o.textContent = p;
-    procSel.appendChild(o);
-  });
-}
-/** Funcion de leer filtros y generar query string*/
-function getFilterQS() {
-  const params = new URLSearchParams();
-  const s = document.getElementById('filterStart').value;
-  const e = document.getElementById('filterEnd').value;
-  const l = document.getElementById('filterLinea').value;
-  const p = document.getElementById('filterProceso').value;
-  if (s) params.append('start', s);
-  if (e) params.append('end',   e);
-  if (l) params.append('linea', l);
-  if (p) params.append('proceso', p);
-  const qs = params.toString();
-  return qs ? '?' + qs : '';
-}
-
-
-   /**
-   * Dado un string "YYYY-MM-DD", devuelve el número de semana ISO (1–53)
-   */
-  function getWeekNumber(dateString) {
-    const date = new Date(dateString);
-    const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNr = (target.getUTCDay() + 6) % 7;  // convierte domingo=0→6, lunes=1→0, etc.
-    target.setUTCDate(target.getUTCDate() - dayNr + 3);
-    const firstThursday = target.valueOf();
-    target.setUTCMonth(0, 1);
-    if (target.getUTCDay() !== 4) {
-      target.setUTCDate(
-        target.getUTCDate() + ((4 - target.getUTCDay()) + 7) % 7
-      );
-    }
-    return 1 + Math.round((firstThursday - target) / 604800000);
+<script>
+  // ------------------------
+  // Helpers
+  // ------------------------
+  async function safeRender(fn) {
+    try { await fn(); }
+    catch(e) { console.error(`Error en ${fn.name}:`, e); }
   }
 
-  async function renderDashboard() {
-    const res = await fetch('/api/eficiencias' + getFilterQS());
-    const data = await res.json();
+  function getFilterQS() {
+    const params = new URLSearchParams();
+    const s = document.getElementById('filterStart').value;
+    const e = document.getElementById('filterEnd').value;
+    const l = document.getElementById('filterLinea').value;
+    const p = document.getElementById('filterProceso').value;
+    if (s) params.append('start', s);
+    if (e) params.append('end',   e);
+    if (l) params.append('linea', l);
+    if (p) params.append('proceso', p);
+    const qs = params.toString();
+    return qs ? '?' + qs : '';
+  }
 
-    // 1) Pinta la tabla
+  async function loadFilterOptions() {
+    const lines = await (await fetch('/api/eficiencias/lines')).json();
+    const lineSel = document.getElementById('filterLinea');
+    lines.forEach(l => {
+      const o = document.createElement('option');
+      o.value = l; o.textContent = l;
+      lineSel.appendChild(o);
+    });
+    const procs = await (await fetch('/api/eficiencias/processes')).json();
+    const procSel = document.getElementById('filterProceso');
+    procs.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = p;
+      procSel.appendChild(o);
+    });
+  }
+
+  // ------------------------
+  // Render functions
+  // ------------------------
+  async function renderDashboard() {
+    const data = await (await fetch('/api/eficiencias' + getFilterQS())).json();
     const tbody = document.querySelector('#efTable tbody');
+    tbody.innerHTML = '';  // evita duplicados
     data.forEach(r => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -187,336 +154,196 @@ function getFilterQS() {
         <td>${r.tipo_proceso}</td>
         <td>${r.proceso}</td>
         <td>${r.eficiencia_asociado.toFixed(1)}%</td>
-        <td>${r.semana}</td>       <!-- Sin cálculo -->
+        <td>${r.semana}</td>
         <td>${r.turno}</td>
-         <!-- Aquí agrega: -->
-    <td>
-      <button onclick="borrarRegistro(${r.id}, this)">🗑 Eliminar</button>
-    </td>
+        <td><button onclick="borrarRegistro(${r.id}, this)">🗑️</button></td>
       `;
       tbody.appendChild(tr);
     });
 
-    // 2) Prepara datos para la gráfica (por línea, promedio)
+    // Eficiencia promedio por línea
     const grouped = {};
     data.forEach(r => {
       if (!grouped[r.linea]) grouped[r.linea] = [];
       grouped[r.linea].push(r.eficiencia_asociado);
     });
     const labels = Object.keys(grouped);
-    const avg = labels.map(l => (
+    const avg    = labels.map(l =>
       grouped[l].reduce((a,b)=>a+b,0)/grouped[l].length
-    ));
+    );
 
-    // 3) Dibuja el chart
     new Chart(document.getElementById('eficienciaChart'), {
       type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Eficiencia Promedio por Línea (%)',
-          data: avg
-        }]
-      },
+      data: { labels, datasets:[{ label:'Eficiencia Prom. Línea (%)', data: avg }] },
+      options: { scales:{ y:{ beginAtZero:true, max:100 } } }
+    });
+  }
+
+  async function renderWeekly() {
+    const data = await (await fetch('/api/eficiencias/weekly' + getFilterQS())).json();
+    const semanas  = [...new Set(data.map(r=>r.semana))].sort((a,b)=>a-b);
+    const procesos = [...new Set(data.map(r=>r.proceso))];
+    const datasets = procesos.map(proc=>({
+      label: proc,
+      data: semanas.map(sem => {
+        const rec = data.find(r=>r.semana===sem && r.proceso===proc);
+        return rec ? rec.promedio_asociado : 0;
+      })
+    }));
+    new Chart(document.getElementById('weeklyChart'), {
+      type: 'line',
+      data: { labels: semanas, datasets },
       options: {
         scales: {
-          y: { beginAtZero: true, max: 100 }
-        }
+          x:{ title:{ display:true, text:'Semana' } },
+          y:{ beginAtZero:true, max:100, title:{ display:true, text:'%' } }
+        },
+        plugins:{ legend:{ position:'top' } }
       }
     });
   }
-   async function borrarRegistro(id, btn) {
-    if (!confirm("¿Seguro que quieres eliminar este registro?")) return;
-    const res = await fetch(`/api/eficiencias/${id}`, { method: 'DELETE' });
-    if (res.status === 204) {
-      btn.closest('tr').remove();
-    } else {
-      alert("Error al eliminar el registro");
-    }
-  } 
-
-async function renderWeekly() {
-  const res  = await fetch('/api/eficiencias/weekly' + getFilterQS());
-  const data = await res.json();
-
-  // 1) Extrae semanas (números) y procesos
-  const semanas = [...new Set(data.map(r => r.semana))].sort((a,b)=>a-b);
-  const procesos = [...new Set(data.map(r => r.proceso))];
-
-  // 2) Dataset por proceso
-  const datasets = procesos.map(proc => ({
-    label: proc,
-    data: semanas.map(sem => {
-      const rec = data.find(r => r.semana === sem && r.proceso === proc);
-      return rec ? rec.promedio_asociado : 0;
-    })
-  }));
-
-  // 3) Dibuja el chart con números en X
-  new Chart(document.getElementById('weeklyChart'), {
-    type: 'line',
-    data: {
-      labels: semanas,    // [4,5,...]
-      datasets
-    },
-    options: {
-      scales: {
-        x: {
-          title: { display: true, text: 'Semana del Año' },
-        },
-        y: {
-          beginAtZero: true,
-          max: 100,
-          title: { display: true, text: '%' }
-        }
-      },
-      plugins: {
-        legend: {
-          position: 'top'
-        }
-      }
-    }
-  });
-}
-
-
-  window.onload = () => {
-    renderDashboard();   // tu tabla y demás charts
-    renderWeekly();      // la gráfica semanal
-  };
 
   async function renderDailyProcess() {
-  const data = await (await fetch('/api/eficiencias/daily/process')).json();
-  const fechas   = [...new Set(data.map(r => r.fecha))];
-  const procesos = [...new Set(data.map(r => r.proceso))];
+    const data = await (await fetch('/api/eficiencias/daily/process')).json();
+    const fechas   = [...new Set(data.map(r=>r.fecha))];
+    const procesos = [...new Set(data.map(r=>r.proceso))];
+    const datasets = procesos.map(proc=>({
+      label: proc,
+      data: fechas.map(f => {
+        const rec = data.find(r=>r.fecha===f && r.proceso===proc);
+        return rec ? rec.promedio_asociado : 0;
+      })
+    }));
+    new Chart(document.getElementById('dailyProcessChart'), {
+      type:'line',
+      data:{ labels: fechas, datasets },
+      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
+    });
+  }
 
-  const datasets = procesos.map(proc => ({
-    label: proc,
-    data: fechas.map(fecha => {
-      const rec = data.find(r => r.fecha === fecha && r.proceso === proc);
-      return rec ? rec.promedio_asociado : 0;
-    })
-  }));
+  async function renderDailyLine() {
+    const data = await (await fetch('/api/eficiencias/daily/line')).json();
+    const fechas = [...new Set(data.map(r=>r.fecha))];
+    const lineas= [...new Set(data.map(r=>r.linea))];
+    const datasets = lineas.map(line=>({
+      label: line,
+      data: fechas.map(f => {
+        const rec = data.find(r=>r.fecha===f && r.linea===line);
+        return rec ? rec.promedio_asociado : 0;
+      })
+    }));
+    new Chart(document.getElementById('dailyLineChart'), {
+      type:'line',
+      data:{ labels: fechas, datasets },
+      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
+    });
+  }
 
-  new Chart(document.getElementById('dailyProcessChart'), {
-    type: 'line',
-    data: { labels: fechas, datasets },
-    options: { scales: { y: { beginAtZero: true, max: 100 } } }
-  });
-}
+  // Función para borrar
+  async function borrarRegistro(id, btn) {
+    if (!confirm("¿Eliminar registro?")) return;
+    const res = await fetch(`/api/eficiencias/${id}`, { method:'DELETE' });
+    if (res.status===204) btn.closest('tr').remove();
+    else alert("Error al eliminar");
+  }
 
-async function renderDailyLine() {
-  const data = await (await fetch('/api/eficiencias/daily/line')).json();
-  const fechas = [...new Set(data.map(r => r.fecha))];
-  const lineas = [...new Set(data.map(r => r.linea))];
+  // Peores 5 asociados
+  async function renderWorstAssociates() {
+    const res  = await fetch('/api/eficiencias/top-associates?limit=5');
+    const data = await res.json();
+    const labels = data.map(r=>r.nombre);
+    const valores= data.map(r=>r.promedio_asociado);
+    new Chart(document.getElementById('topAssocChart'), {
+      type:'bar',
+      data:{ labels, datasets:[{ label:'Eficiencia Asociado (%)', data: valores }] },
+      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
+    });
+  }
 
-  const datasets = lineas.map(linea => ({
-    label: linea,
-    data: fechas.map(fecha => {
-      const rec = data.find(r => r.fecha === fecha && r.linea === linea);
-      return rec ? rec.promedio_asociado : 0;
-    })
-  }));
+  // Por turno
+  async function renderShift() {
+    const res  = await fetch('/api/eficiencias/shift');
+    const data = await res.json();
+    const labels  = data.map(r=>r.turno);
+    const valores = data.map(r=>r.promedio_asociado);
+    new Chart(document.getElementById('shiftChart'), {
+      type:'bar',
+      data:{ labels, datasets:[{ label:'Eficiencia (%)', data: valores }] },
+      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
+    });
+  }
 
-  new Chart(document.getElementById('dailyLineChart'), {
-    type: 'line',
-    data: { labels: fechas, datasets },
-    options: { scales: { y: { beginAtZero: true, max: 100 } } }
-  });
-}
-
-window.onload = () => {
-  renderDashboard();
-  renderWeekly();
-  renderDailyProcess();
-  renderDailyLine();
-};
-
-async function renderTopAssociates() {
-  // 1) Traemos el top 5 (o el que quieras con ?limit=10)
-  const res  = await fetch('/api/eficiencias/top-associates?limit=5');
-  const data = await res.json();
-
-  // 2) Extraemos nombres y valores
-  const labels = data.map(r => r.nombre);
-  const valores = data.map(r => r.promedio_asociado);
-
-  // 3) Dibujamos un bar chart
-  new Chart(document.getElementById('topAssocChart'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Eficiencia Asociado (%) (más bajo primero)',
-        data: valores
-      }]
-    },
-    options: {
-      scales: {
-        y: { beginAtZero: true, max: 100 }
-      }
-    }
-  });
-}
-
-window.onload = () => {
-  renderDashboard();
-  renderWeekly();
-  renderDailyProcess();
-  renderDailyLine();
-  renderTopAssociates();  // <-- lo agregamos aquí
-};
-
-//Eficiencia por turno
-async function renderShift() {
-  const res  = await fetch('/api/eficiencias/shift');
-  const data = await res.json();
-
-  const labels = data.map(r => r.turno);
-  const valores = data.map(r => r.promedio_asociado);
-
-  new Chart(document.getElementById('shiftChart'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{ label: 'Eficiencia Asociado (%)', data: valores }]
-    },
-    options: {
-      scales: {
-        y: { beginAtZero: true, max: 100 }
-      }
-    }
-  });
-}
-
-// Y no olvides llamarlo:
-window.onload = () => {
-  renderDashboard();
-  renderWeekly();
-  renderDailyProcess();
-  renderDailyLine();
-  renderTopAssociates();
-  renderShift();   // <-- aquí
-};
-
-//WD & SW
-async function renderCounts() {
-  const data = await (await fetch('/api/eficiencias/counts')).json();
-
-  const lineas = [...new Set(data.map(r => r.linea))];
-  const swCounts = lineas.map(() => 0);
-  const wdCounts = lineas.map(() => 0);
-
-  data.forEach(r => {
-    const idx = lineas.indexOf(r.linea);
-    if (r.tipo_proceso === 'SW') swCounts[idx] = r.total_piezas;
-    else if (r.tipo_proceso === 'WD') wdCounts[idx] = r.total_piezas;
-  });
-
-  new Chart(document.getElementById('countChart'), {
-    type: 'bar',
-    data: {
-      labels: lineas,
-      datasets: [
-        { label: 'SW (piezas)', data: swCounts },
-        { label: 'WD (piezas)', data: wdCounts }
-      ]
-    },
-    options: {
-      responsive: true,
-      scales: { y: { beginAtZero: true } }
-    }
-  });
-}
-
-
-window.onload = async () => {
-  await loadFilterOptions();     // carga select
-  document.getElementById('applyFilters')
-          .addEventListener('click', () => {
-    // al aplicar filtros, re-renderizamos todo:
-    renderDashboard();
-    renderWeekly();
-    // si quieres también los diarios u otras métricas:
-    renderDailyProcess();
-    renderDailyLine();
-    renderTopAssociates();
-    renderShift();
-    renderCounts();
-  });
-
-  // render inicial sin filtros
-  renderDashboard();
-  renderWeekly();
-  renderDailyProcess();
-  renderDailyLine();
-  renderTopAssociates();
-  renderShift();
-  renderCounts();
-};
- async function renderDowntime() {
-  const qs   = getFilterQS();
-  const data = await (await fetch('/api/eficiencias/weekly/downtime' + qs)).json();
-
-  // extrae semanas y líneas
-  const semanas = [...new Set(data.map(r => r.semana))].sort((a,b)=>a-b);
-  const lineas  = [...new Set(data.map(r => r.linea))];
-
-  // construye un dataset por línea
-  const datasets = lineas.map(line => ({
-    label: line,
-    data: semanas.map(sem => {
-      const rec = data.find(r => r.semana===sem && r.linea===line);
-      return rec ? rec.avg_downtime : 0;
-    }),
-    tension: 0.3,         // línea suavizada
-    pointRadius: 4
-  }));
-
-  new Chart(document.getElementById('downtimeChart'), {
-    type: 'line',
-    data: { labels: semanas, datasets },
-    options: {
-      scales: {
-        x: { title: { display: true, text: 'Semana' } },
-        y: { beginAtZero: true, title: { display: true, text: 'Minutos perdidos' } }
+  // SW vs WD por piezas
+  async function renderCounts() {
+    const data = await (await fetch('/api/eficiencias/counts')).json();
+    const lineas  = [...new Set(data.map(r=>r.linea))];
+    const swCounts = lineas.map(()=>0);
+    const wdCounts = lineas.map(()=>0);
+    data.forEach(r => {
+      const i = lineas.indexOf(r.linea);
+      if (r.tipo_proceso==='SW') swCounts[i]=r.total_piezas;
+      else if (r.tipo_proceso==='WD') wdCounts[i]=r.total_piezas;
+    });
+    new Chart(document.getElementById('countChart'), {
+      type:'bar',
+      data:{
+        labels: lineas,
+        datasets: [
+          { label:'SW (piezas)', data: swCounts },
+          { label:'WD (piezas)', data: wdCounts }
+        ]
       },
-      plugins: {
-        legend: { position: 'top' }
+      options:{ responsive:true, scales:{ y:{ beginAtZero:true } } }
+    });
+  }
+
+  // Downtime semanal
+  async function renderDowntime() {
+    const data = await (await fetch('/api/eficiencias/weekly/downtime' + getFilterQS())).json();
+    const semanas = [...new Set(data.map(r=>r.semana))].sort((a,b)=>a-b);
+    const lineas  = [...new Set(data.map(r=>r.linea))];
+    const datasets= lineas.map(line=>({
+      label: line,
+      data: semanas.map(sem=>{
+        const rec = data.find(r=>r.semana===sem && r.linea===line);
+        return rec ? rec.avg_downtime : 0;
+      }),
+      tension:0.3, pointRadius:4
+    }));
+    new Chart(document.getElementById('downtimeChart'), {
+      type:'line',
+      data:{ labels: semanas, datasets },
+      options:{
+        scales:{
+          x:{ title:{ display:true, text:'Semana' } },
+          y:{ beginAtZero:true, title:{ display:true, text:'Minutos' } }
+        },
+        plugins:{ legend:{ position:'top' } }
       }
-    }
+    });
+  }
+
+  // ------------------------
+  // Inicia todo
+  // ------------------------
+  async function renderAll() {
+    await safeRender(renderDashboard);
+    await safeRender(renderWeekly);
+    await safeRender(renderDailyProcess);
+    await safeRender(renderDailyLine);
+    await safeRender(renderWorstAssociates);
+    await safeRender(renderShift);
+    await safeRender(renderCounts);
+    await safeRender(renderDowntime);
+  }
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    await loadFilterOptions();
+    document.getElementById('applyFilters')
+            .addEventListener('click', renderAll);
+    renderAll();
   });
-}
+</script>
 
-// y en la carga:
-window.onload = () => {
-  loadFilterOptions();
-  document.getElementById('applyFilters')
-          .addEventListener('click', () => {
-    renderDashboard();
-    renderWeekly();
-    renderDailyProcess();
-    renderDailyLine();
-    renderWorstAssociates();
-    renderShift();
-    renderCounts();
-    renderTopAssociates();
-    renderDowntime(); // <<---
-  });
-  // render inicial:
-  renderDashboard();
-  renderWeekly();
-  renderDailyProcess();
-  renderDailyLine();
-  renderWorstAssociates();
-  renderShift();
-  renderCounts();
-  renderTopAssociates();
-  renderDowntime();   // <<---
-};
-
-
-
-  </script>
 </body>
 </html>
