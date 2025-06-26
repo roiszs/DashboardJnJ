@@ -81,29 +81,26 @@
   </div>
 
   <script>
-    // Encapsulamos para no contaminar el scope global
     (function(){
       const form = document.getElementById('efForm');
-      const msg   = document.getElementById('msg');
-
-      form.addEventListener('submit', async function(e) {
+      const msg  = document.getElementById('msg');
+  
+      form.addEventListener('submit', async e => {
         e.preventDefault();
-
+  
         // Recolectamos los campos
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData.entries());
-
-        // Convertimos los valores numéricos
-        data.eficiencia_asociado = Number(data.eficiencia_asociado);
-        data.semana = Number(data.semana);
-
-        // tras convertir eficiencia_asociado y semana:
-        data.piezas = Number(data.piezas);
-        data.tiempo_muerto = data.tiempo_muerto
-      Number(data.tiempo_muerto)
-       0.0;
-
-
+        const raw = Object.fromEntries(new FormData(form).entries());
+        // Convertimos los valores numéricos y dejamos 0 si no se ingresó tiempo muerto
+        const data = {
+          ...raw,
+          eficiencia_asociado: Number(raw.eficiencia_asociado),
+          semana:              Number(raw.semana),
+          piezas:              Number(raw.piezas || 0),
+          tiempo_muerto:       raw.tiempo_muerto
+                                ? Number(raw.tiempo_muerto)
+                                : 0.0
+        };
+  
         try {
           const res = await fetch('/api/eficiencias', {
             method: 'POST',
@@ -122,5 +119,6 @@
       });
     })();
   </script>
+  
 </body>
 </html>
