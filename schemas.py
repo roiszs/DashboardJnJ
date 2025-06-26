@@ -14,7 +14,7 @@ class Eficiencia(BaseModel):
     semana: int
     turno: str
     piezas: int  
-    tiempo_muerto: float
+    tiempo_muerto: float = 0.0
 
     model_config = ConfigDict(from_attributes=True)
 
