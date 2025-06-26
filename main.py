@@ -3,16 +3,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from collections import defaultdict
-import models, schemas
-from database import SessionLocal, engine
 from datetime import date
 from typing import Optional
 
+import models, schemas
+from database import SessionLocal, engine
 
 # 1) Crea las tablas
 models.Base.metadata.create_all(bind=engine)
-
 
 app = FastAPI()
 
@@ -23,7 +21,7 @@ def get_db():
     finally:
         db.close()
 
-# 3) Endpoints de tu API
+# 2) Endpoints de lectura con filtros
 @app.get("/api/eficiencias", response_model=list[schemas.Eficiencia])
 def leer_eficiencias(
     start: Optional[date] = None,
@@ -49,27 +47,32 @@ def leer_eficiencias(
     )
     return list(reversed(recientes))
 
-
-#Select de filtros
 @app.get("/api/eficiencias/lines")
 def get_lines(db: Session = Depends(get_db)):
-    rows = db.query(models.Eficiencia.linea)\
-             .distinct()\
-             .order_by(models.Eficiencia.linea)\
-             .all()
+    rows = (
+        db.query(models.Eficiencia.linea)
+          .distinct()
+          .order_by(models.Eficiencia.linea)
+          .all()
+    )
     return [r[0] for r in rows]
 
 @app.get("/api/eficiencias/processes")
 def get_processes(db: Session = Depends(get_db)):
-    rows = db.query(models.Eficiencia.proceso)\
-             .distinct()\
-             .order_by(models.Eficiencia.proceso)\
-             .all()
+    rows = (
+        db.query(models.Eficiencia.proceso)
+          .distinct()
+          .order_by(models.Eficiencia.proceso)
+          .all()
+    )
     return [r[0] for r in rows]
 
-
+# 3) Creación y borrado
 @app.post("/api/eficiencias", response_model=schemas.Eficiencia, status_code=201)
-def crear_eficiencia(payload: schemas.EficienciaCreate, db: Session = Depends(get_db)):
+def crear_eficiencia(
+    payload: schemas.EficienciaCreate,
+    db: Session = Depends(get_db),
+):
     registro = models.Eficiencia(**payload.dict())
     db.add(registro)
     db.commit()
@@ -84,11 +87,9 @@ def borrar_eficiencia(ef_id: int, db: Session = Depends(get_db)):
     db.delete(reg)
     db.commit()
 
-
-# 4) Monta los estáticos en /static
+# 4) Monta estáticos y HTML
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# 5) Sirve tus páginas HTML
 @app.get("/", response_class=FileResponse)
 def serve_dashboard():
     return "static/index.html"
@@ -97,9 +98,7 @@ def serve_dashboard():
 def serve_form():
     return "static/add.html"
 
-from collections import defaultdict
-
-from sqlalchemy import func
+# 5) Métricas
 
 @app.get("/api/eficiencias/weekly")
 def eficiencia_semanal_por_semana(
@@ -111,7 +110,7 @@ def eficiencia_semanal_por_semana(
 ):
     q = db.query(
         models.Eficiencia.semana.label("semana"),
-        models.Eficiencia.proceso,
+        models.Eficiencia.proceso.label("proceso"),
         func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
     )
     if start:
@@ -131,15 +130,6 @@ def eficiencia_semanal_por_semana(
         for sem, proc, avg in q.all()
     ]
 
-
-
-from sqlalchemy import func
-from fastapi import FastAPI, Depends
-from sqlalchemy.orm import Session
-import models
-from database import SessionLocal
-
-# Eficiencia diaria por proceso
 @app.get("/api/eficiencias/daily/process")
 def eficiencia_diaria_proceso(
     start: Optional[date] = None,
@@ -150,7 +140,7 @@ def eficiencia_diaria_proceso(
 ):
     q = db.query(
         models.Eficiencia.fecha.label("fecha"),
-        models.Eficiencia.proceso,
+        models.Eficiencia.proceso.label("proceso"),
         func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
     )
     if start:
@@ -170,7 +160,6 @@ def eficiencia_diaria_proceso(
         for f, proc, avg in q.all()
     ]
 
-
 @app.get("/api/eficiencias/daily/line")
 def eficiencia_diaria_linea(
     start: Optional[date] = None,
@@ -181,7 +170,7 @@ def eficiencia_diaria_linea(
 ):
     q = db.query(
         models.Eficiencia.fecha.label("fecha"),
-        models.Eficiencia.linea,
+        models.Eficiencia.linea.label("linea"),
         func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
     )
     if start:
@@ -201,68 +190,95 @@ def eficiencia_diaria_linea(
         for f, l, avg in q.all()
     ]
 
-from sqlalchemy import func
-
-#topAsociadospEORES
 @app.get("/api/eficiencias/top-associates")
-def worst_associados(limit: int = 5, db: Session = Depends(get_db)):
-    q = (
-        db.query(
-            models.Eficiencia.nombre_asociado.label("nombre"),
-            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
-        )
-        .group_by(models.Eficiencia.nombre_asociado)
-        .order_by(func.avg(models.Eficiencia.eficiencia_asociado).asc())   # <<< ascendente
-        .limit(limit)
+def worst_associados(
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+    linea: Optional[str] = None,
+    proceso: Optional[str] = None,
+    limit: int = 5,
+    db: Session = Depends(get_db),
+):
+    sub = db.query(
+        models.Eficiencia.nombre_asociado.label("nombre"),
+        func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
     )
+    if start:
+        sub = sub.filter(models.Eficiencia.fecha >= start)
+    if end:
+        sub = sub.filter(models.Eficiencia.fecha <= end)
+    if linea:
+        sub = sub.filter(models.Eficiencia.linea == linea)
+    if proceso:
+        sub = sub.filter(models.Eficiencia.proceso == proceso)
+
+    q = sub.group_by(models.Eficiencia.nombre_asociado) \
+           .order_by(func.avg(models.Eficiencia.eficiencia_asociado).asc()) \
+           .limit(limit)
+
     return [
         {"nombre": nombre, "promedio_asociado": float(round(prom, 2))}
         for nombre, prom in q.all()
     ]
 
-
-from sqlalchemy import func
-
-#Eficiencia por turno
 @app.get("/api/eficiencias/shift")
-def eficiencia_por_turno(db: Session = Depends(get_db)):
-    """
-    Devuelve el promedio de eficiencia_asociado para cada turno.
-    """
-    q = (
-        db.query(
-            models.Eficiencia.turno.label("turno"),
-            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
-        )
-        .group_by(models.Eficiencia.turno)
-        .order_by(models.Eficiencia.turno)
+def eficiencia_por_turno(
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+    linea: Optional[str] = None,
+    proceso: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    q = db.query(
+        models.Eficiencia.turno.label("turno"),
+        func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
     )
-    return [
-        {"turno": turno, "promedio_asociado": float(round(prom, 2))}
-        for turno, prom in q.all()
-    ]
+    if start:
+        q = q.filter(models.Eficiencia.fecha >= start)
+    if end:
+        q = q.filter(models.Eficiencia.fecha <= end)
+    if linea:
+        q = q.filter(models.Eficiencia.linea == linea)
+    if proceso:
+        q = q.filter(models.Eficiencia.proceso == proceso)
 
-from sqlalchemy import func
+    q = q.group_by(models.Eficiencia.turno) \
+         .order_by(models.Eficiencia.turno)
+
+    return [
+        {"turno": t, "promedio_asociado": float(round(p, 2))}
+        for t, p in q.all()
+    ]
 
 @app.get("/api/eficiencias/counts")
-def conteo_sw_wd_por_linea(db: Session = Depends(get_db)):
-    """
-    Para cada línea, suma las piezas producidas por SW y WD.
-    """
-    q = (
-        db.query(
-            models.Eficiencia.linea.label("linea"),
-            models.Eficiencia.tipo_proceso.label("tipo_proceso"),
-            func.sum(models.Eficiencia.piezas).label("total_piezas")
-        )
-        .group_by(models.Eficiencia.linea, models.Eficiencia.tipo_proceso)
-        .order_by(models.Eficiencia.linea)
+def conteo_sw_wd_por_linea(
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+    linea: Optional[str] = None,
+    proceso: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    sub = db.query(
+        models.Eficiencia.linea.label("linea"),
+        models.Eficiencia.tipo_proceso.label("tipo_proceso"),
+        func.sum(models.Eficiencia.piezas).label("total_piezas")
     )
-    return [
-        {"linea": linea, "tipo_proceso": tp, "total_piezas": int(tpiezas)}
-        for linea, tp, tpiezas in q.all()
-    ]
+    if start:
+        sub = sub.filter(models.Eficiencia.fecha >= start)
+    if end:
+        sub = sub.filter(models.Eficiencia.fecha <= end)
+    if linea:
+        sub = sub.filter(models.Eficiencia.linea == linea)
+    if proceso:
+        sub = sub.filter(models.Eficiencia.proceso == proceso)
 
+    q = sub.group_by(models.Eficiencia.linea, models.Eficiencia.tipo_proceso) \
+           .order_by(models.Eficiencia.linea)
+
+    return [
+        {"linea": linea, "tipo_proceso": tp, "total_piezas": int(tpz)}
+        for linea, tp, tpz in q.all()
+    ]
 
 @app.get("/api/eficiencias/weekly/downtime")
 def downtime_weekly_by_line(
