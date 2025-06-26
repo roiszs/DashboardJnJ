@@ -24,14 +24,13 @@ def get_db():
         db.close()
 
 # 3) Endpoints de tu API
-
 @app.get("/api/eficiencias", response_model=list[schemas.Eficiencia])
 def leer_eficiencias(
     start: Optional[date] = None,
-    end:   Optional[date] = None,
-    linea: Optional[str]  = None,
-    proceso: Optional[str]= None,
-    db: Session = Depends(get_db)
+    end: Optional[date] = None,
+    linea: Optional[str] = None,
+    proceso: Optional[str] = None,
+    db: Session = Depends(get_db),
 ):
     q = db.query(models.Eficiencia)
     if start:
@@ -49,6 +48,7 @@ def leer_eficiencias(
          .all()
     )
     return list(reversed(recientes))
+
 
 #Select de filtros
 @app.get("/api/eficiencias/lines")
@@ -103,33 +103,34 @@ from sqlalchemy import func
 
 @app.get("/api/eficiencias/weekly")
 def eficiencia_semanal_por_semana(
-    start: date | None   = None,
-    end:   date | None   = None,
-    linea: str  | None   = None,
-    proceso: str| None   = None,
-    db: Session = Depends(get_db)
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+    linea: Optional[str] = None,
+    proceso: Optional[str] = None,
+    db: Session = Depends(get_db),
 ):
-    # 1) Base de la query
     q = db.query(
         models.Eficiencia.semana.label("semana"),
         models.Eficiencia.proceso,
         func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
     )
-    # 2) Si quieres aplicar filtros de fecha/linea/proceso:
-    if start:   q = q.filter(models.Eficiencia.fecha >= start)
-    if end:     q = q.filter(models.Eficiencia.fecha <= end)
-    if linea:   q = q.filter(models.Eficiencia.linea == linea)
-    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
+    if start:
+        q = q.filter(models.Eficiencia.fecha >= start)
+    if end:
+        q = q.filter(models.Eficiencia.fecha <= end)
+    if linea:
+        q = q.filter(models.Eficiencia.linea == linea)
+    if proceso:
+        q = q.filter(models.Eficiencia.proceso == proceso)
 
-    # 3) Agrupa por la columna semana en vez de la fecha
     q = q.group_by(models.Eficiencia.semana, models.Eficiencia.proceso) \
          .order_by(models.Eficiencia.semana)
 
-    # 4) Devuelve JSON
     return [
-        {"semana": int(sem), "proceso": proc, "promedio_asociado": float(round(avg,2))}
+        {"semana": int(sem), "proceso": proc, "promedio_asociado": float(round(avg, 2))}
         for sem, proc, avg in q.all()
     ]
+
 
 
 from sqlalchemy import func
@@ -140,33 +141,61 @@ from database import SessionLocal
 
 # Eficiencia diaria por proceso
 @app.get("/api/eficiencias/daily/process")
-def eficiencia_diaria_proceso(db: Session = Depends(get_db)):
-    q = (
-        db.query(
-            models.Eficiencia.fecha.label("fecha"),
-            models.Eficiencia.proceso,
-            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
-        )
-        .group_by(models.Eficiencia.fecha, models.Eficiencia.proceso)
-        .order_by(models.Eficiencia.fecha)
+def eficiencia_diaria_proceso(
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+    linea: Optional[str] = None,
+    proceso: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    q = db.query(
+        models.Eficiencia.fecha.label("fecha"),
+        models.Eficiencia.proceso,
+        func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
     )
+    if start:
+        q = q.filter(models.Eficiencia.fecha >= start)
+    if end:
+        q = q.filter(models.Eficiencia.fecha <= end)
+    if linea:
+        q = q.filter(models.Eficiencia.linea == linea)
+    if proceso:
+        q = q.filter(models.Eficiencia.proceso == proceso)
+
+    q = q.group_by(models.Eficiencia.fecha, models.Eficiencia.proceso) \
+         .order_by(models.Eficiencia.fecha)
+
     return [
-        {"fecha": f.isoformat(), "proceso": p, "promedio_asociado": float(avg)}
-        for f, p, avg in q.all()
+        {"fecha": f.isoformat(), "proceso": proc, "promedio_asociado": float(avg)}
+        for f, proc, avg in q.all()
     ]
 
-# Eficiencia diaria por línea
+
 @app.get("/api/eficiencias/daily/line")
-def eficiencia_diaria_linea(db: Session = Depends(get_db)):
-    q = (
-        db.query(
-            models.Eficiencia.fecha.label("fecha"),
-            models.Eficiencia.linea,
-            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
-        )
-        .group_by(models.Eficiencia.fecha, models.Eficiencia.linea)
-        .order_by(models.Eficiencia.fecha)
+def eficiencia_diaria_linea(
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+    linea: Optional[str] = None,
+    proceso: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    q = db.query(
+        models.Eficiencia.fecha.label("fecha"),
+        models.Eficiencia.linea,
+        func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
     )
+    if start:
+        q = q.filter(models.Eficiencia.fecha >= start)
+    if end:
+        q = q.filter(models.Eficiencia.fecha <= end)
+    if linea:
+        q = q.filter(models.Eficiencia.linea == linea)
+    if proceso:
+        q = q.filter(models.Eficiencia.proceso == proceso)
+
+    q = q.group_by(models.Eficiencia.fecha, models.Eficiencia.linea) \
+         .order_by(models.Eficiencia.fecha)
+
     return [
         {"fecha": f.isoformat(), "linea": l, "promedio_asociado": float(avg)}
         for f, l, avg in q.all()
@@ -237,32 +266,30 @@ def conteo_sw_wd_por_linea(db: Session = Depends(get_db)):
 
 @app.get("/api/eficiencias/weekly/downtime")
 def downtime_weekly_by_line(
-    start: date | None   = None,
-    end:   date | None   = None,
-    linea: str  | None   = None,
-    proceso: str| None   = None,
-    db: Session = Depends(get_db)
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+    linea: Optional[str] = None,
+    proceso: Optional[str] = None,
+    db: Session = Depends(get_db),
 ):
-    # Base de la query: sumar tiempo_muerto
     q = db.query(
         models.Eficiencia.semana.label("semana"),
         models.Eficiencia.linea.label("linea"),
         func.avg(models.Eficiencia.tiempo_muerto).label("avg_downtime")
     )
-    # filtros opcionales
-    if start:   q = q.filter(models.Eficiencia.fecha >= start)
-    if end:     q = q.filter(models.Eficiencia.fecha <= end)
-    if linea:   q = q.filter(models.Eficiencia.linea == linea)
-    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
+    if start:
+        q = q.filter(models.Eficiencia.fecha >= start)
+    if end:
+        q = q.filter(models.Eficiencia.fecha <= end)
+    if linea:
+        q = q.filter(models.Eficiencia.linea == linea)
+    if proceso:
+        q = q.filter(models.Eficiencia.proceso == proceso)
 
     q = q.group_by(models.Eficiencia.semana, models.Eficiencia.linea) \
          .order_by(models.Eficiencia.semana)
 
     return [
-        {
-          "semana": int(sem),
-          "linea": line,
-          "avg_downtime": float(round(dt,2))
-        }
+        {"semana": int(sem), "linea": line, "avg_downtime": float(round(dt, 2))}
         for sem, line, dt in q.all()
     ]
