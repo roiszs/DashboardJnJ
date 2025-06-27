@@ -284,7 +284,7 @@
 
   // Peores 5 asociados
   async function renderWorstAssociates() {
-    const res  = await fetch('/api/eficiencias/top-associates?limit=5');
+    const res  = await fetch('/api/eficiencias/top-associates?limit=5' + getFilterQS());
     const data = await res.json();
     const labels = data.map(r=>r.nombre);
     const valores= data.map(r=>r.promedio_asociado);
@@ -310,7 +310,7 @@
 
   // SW vs WD por piezas
   async function renderCounts() {
-    const data = await (await fetch('/api/eficiencias/counts')).json();
+    const data = await (await fetch('/api/eficiencias/counts' + getFilterQS())).json();
     const lineas  = [...new Set(data.map(r=>r.linea))];
     const swCounts = lineas.map(()=>0);
     const wdCounts = lineas.map(()=>0);
