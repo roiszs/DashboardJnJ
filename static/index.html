@@ -239,7 +239,7 @@
   }
 
   async function renderDailyProcess() {
-    const data = await (await fetch('/api/eficiencias/daily/process')).json();
+    const data = await (await fetch('/api/eficiencias/daily/process' + getFilterQS)).json();
     const fechas   = [...new Set(data.map(r=>r.fecha))];
     const procesos = [...new Set(data.map(r=>r.proceso))];
     const datasets = procesos.map(proc=>({
@@ -257,7 +257,7 @@
   }
 
   async function renderDailyLine() {
-    const data = await (await fetch('/api/eficiencias/daily/line')).json();
+    const data = await (await fetch('/api/eficiencias/daily/line' + getFilterQS)).json();
     const fechas = [...new Set(data.map(r=>r.fecha))];
     const lineas= [...new Set(data.map(r=>r.linea))];
     const datasets = lineas.map(line=>({
