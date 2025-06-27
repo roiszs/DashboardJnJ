@@ -297,7 +297,7 @@
 
   // Por turno
   async function renderShift() {
-    const res  = await fetch('/api/eficiencias/shift');
+    const res  = await fetch('/api/eficiencias/shift' + getFilterQS());
     const data = await res.json();
     const labels  = data.map(r=>r.turno);
     const valores = data.map(r=>r.promedio_asociado);
