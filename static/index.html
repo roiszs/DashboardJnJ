@@ -134,6 +134,13 @@
 
 
 <script>
+  function createChart(id, cfg) {
+  const canvas = document.getElementById(id);
+  const old = Chart.getChart(canvas);
+  if (old) old.destroy();
+  return new Chart(canvas, cfg);
+}
+
   // ------------------------
   // Helpers
   // ------------------------
@@ -239,48 +246,50 @@
   }
 
   async function renderDailyProcess() {
-    const data = await (await fetch('/api/eficiencias/daily/process' + getFilterQS)).json();
-    const fechas   = [...new Set(data.map(r=>r.fecha))];
-    const procesos = [...new Set(data.map(r=>r.proceso))];
-    const datasets = procesos.map(proc=>({
-      label: proc,
-      data: fechas.map(f => {
-        const rec = data.find(r=>r.fecha===f && r.proceso===proc);
-        return rec ? rec.promedio_asociado : 0;
-      })
-    }));
-    new Chart(document.getElementById('dailyProcessChart'), {
-      type:'line',
-      data:{ labels: fechas, datasets },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
-    });
-  }
+  // 1) Trae los datos **con filtros**
+  const res  = await fetch('/api/eficiencias/daily/process' + getFilterQS());
+  const data = await res.json();
 
-  async function renderDailyLine() {
-    const data = await (await fetch('/api/eficiencias/daily/line' + getFilterQS)).json();
-    const fechas = [...new Set(data.map(r=>r.fecha))];
-    const lineas= [...new Set(data.map(r=>r.linea))];
-    const datasets = lineas.map(line=>({
-      label: line,
-      data: fechas.map(f => {
-        const rec = data.find(r=>r.fecha===f && r.linea===line);
-        return rec ? rec.promedio_asociado : 0;
-      })
-    }));
-    new Chart(document.getElementById('dailyLineChart'), {
-      type:'line',
-      data:{ labels: fechas, datasets },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
-    });
-  }
+  // 2) Prepara labels y datasets (igual que antes)…
+  const fechas   = [...new Set(data.map(r => r.fecha))];
+  const procesos = [...new Set(data.map(r => r.proceso))];
+  const datasets = procesos.map(proc => ({
+    label: proc,
+    data: fechas.map(f => {
+      const rec = data.find(r => r.fecha === f && r.proceso === proc);
+      return rec ? rec.promedio_asociado : 0;
+    })
+  }));
 
-  // Función para borrar
-  async function borrarRegistro(id, btn) {
-    if (!confirm("¿Eliminar registro?")) return;
-    const res = await fetch(`/api/eficiencias/${id}`, { method:'DELETE' });
-    if (res.status===204) btn.closest('tr').remove();
-    else alert("Error al eliminar");
-  }
+  // 3) Dibuja destruyendo primero la anterior
+  createChart('dailyProcessChart', {
+    type: 'line',
+    data: { labels: fechas, datasets },
+    options: { scales: { y: { beginAtZero: true, max: 100 } } }
+  });
+}
+
+async function renderDailyLine() {
+  const res  = await fetch('/api/eficiencias/daily/line' + getFilterQS());
+  const data = await res.json();
+
+  const fechas = [...new Set(data.map(r => r.fecha))];
+  const lineas = [...new Set(data.map(r => r.linea))];
+  const datasets = lineas.map(linea => ({
+    label: linea,
+    data: fechas.map(f => {
+      const rec = data.find(r => r.fecha === f && r.linea === linea);
+      return rec ? rec.promedio_asociado : 0;
+    })
+  }));
+
+  createChart('dailyLineChart', {
+    type: 'line',
+    data: { labels: fechas, datasets },
+    options: { scales: { y: { beginAtZero: true, max: 100 } } }
+  });
+}
+
 
   // Peores 5 asociados
   async function renderWorstAssociates() {
