@@ -184,42 +184,45 @@
   // Render functions
   // ------------------------
   async function renderDashboard() {
-    const data = await (await fetch('/api/eficiencias' + getFilterQS())).json();
-    const tbody = document.querySelector('#efTable tbody');
-    tbody.innerHTML = '';  // evita duplicados
-    data.forEach(r => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${r.nombre_asociado}</td>
-        <td>${r.linea}</td>
-        <td>${r.supervisor}</td>
-        <td>${r.tipo_proceso}</td>
-        <td>${r.proceso}</td>
-        <td>${r.eficiencia_asociado.toFixed(1)}%</td>
-        <td>${r.semana}</td>
-        <td>${r.turno}</td>
-        <td><button onclick="borrarRegistro(${r.id}, this)">🗑️</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
+  const res  = await fetch('/api/eficiencias' + getFilterQS());
+  const data = await res.json();
 
-    // Eficiencia promedio por línea
-    const grouped = {};
-    data.forEach(r => {
-      if (!grouped[r.linea]) grouped[r.linea] = [];
-      grouped[r.linea].push(r.eficiencia_asociado);
-    });
-    const labels = Object.keys(grouped);
-    const avg    = labels.map(l =>
-      grouped[l].reduce((a,b)=>a+b,0)/grouped[l].length
-    );
+  // --- Tabla ---
+  const tbody = document.querySelector('#efTable tbody');
+  tbody.innerHTML = '';
+  data.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.nombre_asociado}</td>
+      <td>${r.linea}</td>
+      <td>${r.supervisor}</td>
+      <td>${r.tipo_proceso}</td>
+      <td>${r.proceso}</td>
+      <td>${r.eficiencia_asociado.toFixed(1)}%</td>
+      <td>${r.semana}</td>
+      <td>${r.turno}</td>
+      <td><button onclick="borrarRegistro(${r.id}, this)">🗑️</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
 
-    new Chart(document.getElementById('eficienciaChart'), {
-      type: 'bar',
-      data: { labels, datasets:[{ label:'Eficiencia Prom. Línea (%)', data: avg }] },
-      options: { scales:{ y:{ beginAtZero:true, max:100 } } }
-    });
-  }
+  // --- Chart ---
+  const grouped = {};
+  data.forEach(r => {
+    if (!grouped[r.linea]) grouped[r.linea] = [];
+    grouped[r.linea].push(r.eficiencia_asociado);
+  });
+  const labels = Object.keys(grouped);
+  const avg    = labels.map(l =>
+    grouped[l].reduce((a,b)=>a+b,0) / grouped[l].length
+  );
+
+  createChart('eficienciaChart', {
+    type: 'bar',
+    data: { labels, datasets:[{ label:'Eficiencia Prom. Línea (%)', data: avg }] },
+    options: { scales:{ y:{ beginAtZero:true, max:100 } } }
+  });
+}
 
   async function renderWeekly() {
     const data = await (await fetch('/api/eficiencias/weekly' + getFilterQS())).json();
