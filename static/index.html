@@ -224,36 +224,38 @@
   });
 }
 
-  async function renderWeekly() {
-    const data = await (await fetch('/api/eficiencias/weekly' + getFilterQS())).json();
-    const semanas  = [...new Set(data.map(r=>r.semana))].sort((a,b)=>a-b);
-    const procesos = [...new Set(data.map(r=>r.proceso))];
-    const datasets = procesos.map(proc=>({
-      label: proc,
-      data: semanas.map(sem => {
-        const rec = data.find(r=>r.semana===sem && r.proceso===proc);
-        return rec ? rec.promedio_asociado : 0;
-      })
-    }));
-    new Chart(document.getElementById('weeklyChart'), {
-      type: 'line',
-      data: { labels: semanas, datasets },
-      options: {
-        scales: {
-          x:{ title:{ display:true, text:'Semana' } },
-          y:{ beginAtZero:true, max:100, title:{ display:true, text:'%' } }
-        },
-        plugins:{ legend:{ position:'top' } }
-      }
-    });
-  }
+async function renderWeekly() {
+  const res  = await fetch('/api/eficiencias/weekly' + getFilterQS());
+  const data = await res.json();
 
-  async function renderDailyProcess() {
-  // 1) Trae los datos **con filtros**
+  const semanas  = [...new Set(data.map(r => r.semana))].sort((a,b)=>a-b);
+  const procesos = [...new Set(data.map(r => r.proceso))];
+  const datasets = procesos.map(proc => ({
+    label: proc,
+    data: semanas.map(sem => {
+      const rec = data.find(r => r.semana === sem && r.proceso === proc);
+      return rec ? rec.promedio_asociado : 0;
+    })
+  }));
+
+  createChart('weeklyChart', {
+    type: 'line',
+    data: { labels: semanas, datasets },
+    options: {
+      scales: {
+        x:{ title:{ display:true, text:'Semana' } },
+        y:{ beginAtZero:true, max:100, title:{ display:true, text:'%' } }
+      },
+      plugins:{ legend:{ position:'top' } }
+    }
+  });
+}
+
+// 3) Diaria por proceso
+async function renderDailyProcess() {
   const res  = await fetch('/api/eficiencias/daily/process' + getFilterQS());
   const data = await res.json();
 
-  // 2) Prepara labels y datasets (igual que antes)…
   const fechas   = [...new Set(data.map(r => r.fecha))];
   const procesos = [...new Set(data.map(r => r.proceso))];
   const datasets = procesos.map(proc => ({
@@ -264,24 +266,24 @@
     })
   }));
 
-  // 3) Dibuja destruyendo primero la anterior
   createChart('dailyProcessChart', {
     type: 'line',
     data: { labels: fechas, datasets },
-    options: { scales: { y: { beginAtZero: true, max: 100 } } }
+    options: { scales:{ y:{ beginAtZero:true, max:100 } } }
   });
 }
 
+// 4) Diaria por línea
 async function renderDailyLine() {
   const res  = await fetch('/api/eficiencias/daily/line' + getFilterQS());
   const data = await res.json();
 
   const fechas = [...new Set(data.map(r => r.fecha))];
   const lineas = [...new Set(data.map(r => r.linea))];
-  const datasets = lineas.map(linea => ({
-    label: linea,
+  const datasets = lineas.map(line => ({
+    label: line,
     data: fechas.map(f => {
-      const rec = data.find(r => r.fecha === f && r.linea === linea);
+      const rec = data.find(r => r.fecha === f && r.linea === line);
       return rec ? rec.promedio_asociado : 0;
     })
   }));
@@ -289,108 +291,111 @@ async function renderDailyLine() {
   createChart('dailyLineChart', {
     type: 'line',
     data: { labels: fechas, datasets },
-    options: { scales: { y: { beginAtZero: true, max: 100 } } }
+    options: { scales:{ y:{ beginAtZero:true, max:100 } } }
   });
 }
 
+// 5) Peores 5 asociados
+async function renderWorstAssociates() {
+  const res  = await fetch('/api/eficiencias/top-associates?limit=5' + getFilterQS());
+  const data = await res.json();
 
-  // Peores 5 asociados
-  async function renderWorstAssociates() {
-    const res  = await fetch('/api/eficiencias/top-associates?limit=5' + getFilterQS());
-    const data = await res.json();
-    const labels = data.map(r=>r.nombre);
-    const valores= data.map(r=>r.promedio_asociado);
-    new Chart(document.getElementById('topAssocChart'), {
-      type:'bar',
-      data:{ labels, datasets:[{ label:'Eficiencia Asociado (%)', data: valores }] },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
-    });
-  }
+  const labels = data.map(r => r.nombre);
+  const valores= data.map(r => r.promedio_asociado);
 
-  // Por turno
-  async function renderShift() {
-    const res  = await fetch('/api/eficiencias/shift' + getFilterQS());
-    const data = await res.json();
-    const labels  = data.map(r=>r.turno);
-    const valores = data.map(r=>r.promedio_asociado);
-    new Chart(document.getElementById('shiftChart'), {
-      type:'bar',
-      data:{ labels, datasets:[{ label:'Eficiencia (%)', data: valores }] },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
-    });
-  }
-
-  // SW vs WD por piezas
-  async function renderCounts() {
-    const data = await (await fetch('/api/eficiencias/counts' + getFilterQS())).json();
-    const lineas  = [...new Set(data.map(r=>r.linea))];
-    const swCounts = lineas.map(()=>0);
-    const wdCounts = lineas.map(()=>0);
-    data.forEach(r => {
-      const i = lineas.indexOf(r.linea);
-      if (r.tipo_proceso==='SW') swCounts[i]=r.total_piezas;
-      else if (r.tipo_proceso==='WD') wdCounts[i]=r.total_piezas;
-    });
-    new Chart(document.getElementById('countChart'), {
-      type:'bar',
-      data:{
-        labels: lineas,
-        datasets: [
-          { label:'SW (piezas)', data: swCounts },
-          { label:'WD (piezas)', data: wdCounts }
-        ]
-      },
-      options:{ responsive:true, scales:{ y:{ beginAtZero:true } } }
-    });
-  }
-
-  // Downtime semanal
-  async function renderDowntime() {
-    const data = await (await fetch('/api/eficiencias/weekly/downtime' + getFilterQS())).json();
-    const semanas = [...new Set(data.map(r=>r.semana))].sort((a,b)=>a-b);
-    const lineas  = [...new Set(data.map(r=>r.linea))];
-    const datasets= lineas.map(line=>({
-      label: line,
-      data: semanas.map(sem=>{
-        const rec = data.find(r=>r.semana===sem && r.linea===line);
-        return rec ? rec.avg_downtime : 0;
-      }),
-      tension:0.3, pointRadius:4
-    }));
-    new Chart(document.getElementById('downtimeChart'), {
-      type:'line',
-      data:{ labels: semanas, datasets },
-      options:{
-        scales:{
-          x:{ title:{ display:true, text:'Semana' } },
-          y:{ beginAtZero:true, title:{ display:true, text:'Minutos' } }
-        },
-        plugins:{ legend:{ position:'top' } }
-      }
-    });
-  }
-
-  // ------------------------
-  // Inicia todo
-  // ------------------------
-  async function renderAll() {
-    await safeRender(renderDashboard);
-    await safeRender(renderWeekly);
-    await safeRender(renderDailyProcess);
-    await safeRender(renderDailyLine);
-    await safeRender(renderWorstAssociates);
-    await safeRender(renderShift);
-    await safeRender(renderCounts);
-    await safeRender(renderDowntime);
-  }
-
-  window.addEventListener('DOMContentLoaded', async () => {
-    await loadFilterOptions();
-    document.getElementById('applyFilters')
-            .addEventListener('click', renderAll);
-    renderAll();
+  createChart('topAssocChart', {
+    type: 'bar',
+    data: { labels, datasets:[{ label:'Eficiencia Asociado (%)', data: valores }] },
+    options: { scales:{ y:{ beginAtZero:true, max:100 } } }
   });
-</script>
+}
 
-</body>
-</html>
+// 6) Por turno
+async function renderShift() {
+  const res  = await fetch('/api/eficiencias/shift' + getFilterQS());
+  const data = await res.json();
+
+  const labels = data.map(r => r.turno);
+  const valores= data.map(r => r.promedio_asociado);
+
+  createChart('shiftChart', {
+    type: 'bar',
+    data: { labels, datasets:[{ label:'Eficiencia (%)', data: valores }] },
+    options: { scales:{ y:{ beginAtZero:true, max:100 } } }
+  });
+}
+
+// 7) Conteo SW vs WD
+async function renderCounts() {
+  const res  = await fetch('/api/eficiencias/counts' + getFilterQS());
+  const data = await res.json();
+
+  const lineas  = [...new Set(data.map(r => r.linea))];
+  const swCounts = lineas.map(() => 0);
+  const wdCounts = lineas.map(() => 0);
+
+  data.forEach(r => {
+    const i = lineas.indexOf(r.linea);
+    if (r.tipo_proceso === 'SW') swCounts[i] = r.total_piezas;
+    else if (r.tipo_proceso === 'WD') wdCounts[i] = r.total_piezas;
+  });
+
+  createChart('countChart', {
+    type: 'bar',
+    data: {
+      labels: lineas,
+      datasets: [
+        { label:'SW (piezas)', data: swCounts },
+        { label:'WD (piezas)', data: wdCounts }
+      ]
+    },
+    options: { responsive:true, scales:{ y:{ beginAtZero:true } } }
+  });
+}
+
+// 8) Downtime semanal
+async function renderDowntime() {
+  const res  = await fetch('/api/eficiencias/weekly/downtime' + getFilterQS());
+  const data = await res.json();
+
+  const semanas  = [...new Set(data.map(r => r.semana))].sort((a,b)=>a-b);
+  const lineas   = [...new Set(data.map(r => r.linea))];
+  const datasets = lineas.map(line => ({
+    label: line,
+    data: semanas.map(sem => {
+      const rec = data.find(r => r.semana === sem && r.linea === line);
+      return rec ? rec.avg_downtime : 0;
+    }),
+    tension:0.3, pointRadius:4
+  }));
+
+  createChart('downtimeChart', {
+    type: 'line',
+    data: { labels: semanas, datasets },
+    options: {
+      scales: {
+        x:{ title:{ display:true, text:'Semana' } },
+        y:{ beginAtZero:true, title:{ display:true, text:'Minutos' } }
+      },
+      plugins:{ legend:{ position:'top' } }
+    }
+  });
+}
+
+// Llamada única a todos los renders
+async function renderAll() {
+  await safeRender(renderDashboard);
+  await safeRender(renderWeekly);
+  await safeRender(renderDailyProcess);
+  await safeRender(renderDailyLine);
+  await safeRender(renderWorstAssociates);
+  await safeRender(renderShift);
+  await safeRender(renderCounts);
+  await safeRender(renderDowntime);
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadFilterOptions();
+  document.getElementById('applyFilters').addEventListener('click', renderAll);
+  renderAll();
+});
