@@ -80,6 +80,27 @@
     <div class="msg" id="msg"></div>
   </div>
 
+  <!-- Tailwind Play CDN + configuración de colores y tipografía -->
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          'jj-red':   '#E2231A',
+          'jj-gray':  '#F5F5F5',
+          'jj-dark':  '#333333',
+          'jj-light': '#FFFFFF'
+        },
+        fontFamily: {
+          sans: ['Source Sans Pro', 'ui-sans-serif', 'system-ui']
+        }
+      }
+    }
+  }
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+
+
   <script>
     (function(){
       const form = document.getElementById('efForm');
