@@ -17,55 +17,66 @@
 
     <!-- Filtros -->
     
-    <aside class="sticky top-4 bg-jj-light p-6 rounded-xl shadow-lg w-full max-w-xs mx-auto">
-      <h2 class="text-2xl font-bold text-jj-red mb-6">Filtros</h2>
-      <div class="space-y-5">
-        <div>
-          <label for="filterStart" class="block text-sm font-medium text-jj-dark mb-1">
-            Fecha Inicio
-          </label>
-          <input id="filterStart" type="date"
-                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red focus:border-transparent"/>
-        </div>
-        <div>
-          <label for="filterEnd" class="block text-sm font-medium text-jj-dark mb-1">
-            Fecha Fin
-          </label>
-          <input id="filterEnd" type="date"
-                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red focus:border-transparent"/>
-        </div>
-        <div>
-          <label for="filterLinea" class="block text-sm font-medium text-jj-dark mb-1">
-            Línea
-          </label>
-          <select id="filterLinea"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red focus:border-transparent">
-            <option value="">-- Todas --</option>
-          </select>
-        </div>
-        <div>
-          <label for="filterProceso" class="block text-sm font-medium text-jj-dark mb-1">
-            Proceso
-          </label>
-          <select id="filterProceso"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red focus:border-transparent">
-            <option value="">-- Todos --</option>
-          </select>
-        </div>
+<header class="sticky top-0 z-20 bg-jj-light shadow-md">
+  <div class="container mx-auto px-4 py-3">
+    <div class="flex flex-wrap items-end gap-4">
+      <!-- Fecha Inicio -->
+      <div class="flex flex-col">
+        <label for="filterStart" class="text-sm font-medium text-jj-dark mb-1">
+          Fecha Inicio
+        </label>
+        <input id="filterStart" type="date"
+               class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red"/>
+      </div>
+
+      <!-- Fecha Fin -->
+      <div class="flex flex-col">
+        <label for="filterEnd" class="text-sm font-medium text-jj-dark mb-1">
+          Fecha Fin
+        </label>
+        <input id="filterEnd" type="date"
+               class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red"/>
+      </div>
+
+      <!-- Línea -->
+      <div class="flex flex-col">
+        <label for="filterLinea" class="text-sm font-medium text-jj-dark mb-1">
+          Línea
+        </label>
+        <select id="filterLinea"
+                class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red">
+          <option value="">-- Todas --</option>
+        </select>
+      </div>
+
+      <!-- Proceso -->
+      <div class="flex flex-col">
+        <label for="filterProceso" class="text-sm font-medium text-jj-dark mb-1">
+          Proceso
+        </label>
+        <select id="filterProceso"
+                class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red">
+          <option value="">-- Todos --</option>
+        </select>
+      </div>
+
+      <!-- Botón Aplicar -->
+      <div class="ml-auto">
         <button id="applyFilters"
-                class="block w-full text-center bg-jj-red text-jj-light font-semibold py-2 rounded-lg hover:bg-red-700 transition">
+                class="bg-jj-red text-jj-light font-semibold px-5 py-2 rounded-md hover:bg-red-700 transition">
           Aplicar filtros
         </button>
       </div>
-    </aside>
-    
-    
+    </div>
+  </div>
+</header>
+
     
 
     <!-- Botón para agregar registro -->
     <nav class="bg-jj-red text-jj-light p-4 rounded shadow-md mb-6">
       <div class="container mx-auto flex items-center justify-between">
-        <h1 class="text-2xl font-bold">Johnson &amp; Johnson Dashboard</h1>
+        <h1 class="text-2xl font-bold">Johnson &amp; Johnson Dashboard S&S</h1>
         <a href="/add.html"
            class="bg-jj-light text-jj-red px-4 py-2 rounded hover:bg-jj-red hover:text-jj-light transition">
           + Nuevo Registro
