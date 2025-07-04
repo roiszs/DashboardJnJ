@@ -285,16 +285,40 @@
     });
   }
 
+  //async function renderWorstAssociates() {
+  //  const data = await (await fetch('/api/eficiencias/top-associates?limit=5' + getFilterQS())).json();
+  //  const labels = data.map(r=>r.nombre);
+  //  const valores= data.map(r=>r.promedio_asociado);
+   // createChart('topAssocChart', {
+     // type:'bar',
+   //   data:{ labels, datasets:[{ label:'Eficiencia Asociado (%)', data: valores }] },
+     // options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
+   // });
+  //}
+
   async function renderWorstAssociates() {
-    const data = await (await fetch('/api/eficiencias/top-associates?limit=5' + getFilterQS())).json();
-    const labels = data.map(r=>r.nombre);
-    const valores= data.map(r=>r.promedio_asociado);
-    createChart('topAssocChart', {
-      type:'bar',
-      data:{ labels, datasets:[{ label:'Eficiencia Asociado (%)', data: valores }] },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
-    });
-  }
+  // 1) Construye la URL dinámicamente
+  const base = '/api/eficiencias/top-associates';
+  const qs   = getFilterQS();            // ej. "?start=2025-06-01&linea=L26"
+  // Si ya hay filtros ponemos '&', si no ponemos '?'
+  const connector = qs ? '&' : '?';
+  const url = `${base}${qs}${connector}limit=5`;
+
+  // 2) Pide los datos
+  const res  = await fetch(url);
+  const data = await res.json();
+
+  // 3) Extrae etiquetas y valores
+  const labels = data.map(r => r.nombre);
+  const valores= data.map(r => r.promedio_asociado);
+
+  // 4) Dibuja destruyendo primero
+  createChart('topAssocChart', {
+    type: 'bar',
+    data: { labels, datasets:[{ label:'Eficiencia Asociado (%)', data: valores }] },
+    options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
+  });
+} 
 
   async function renderShift() {
     const data = await (await fetch('/api/eficiencias/shift' + getFilterQS())).json();
