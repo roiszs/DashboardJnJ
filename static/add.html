@@ -6,104 +6,7 @@
   <title>Agregar Eficiencia</title>
   <!-- Enlaza el CSS que montas en /static -->
   <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body class="bg-jj-gray font-sans text-jj-dark min-h-screen">
-  <div class="container mx-auto py-8">
-    <!-- Botón de navegación con clase -->
-    <button class="nav-btn" onclick="location.href='/'">
-      📊 Ver Dashboard
-    </button>
-
-    <body class="bg-jj-gray font-sans">
-
-      <!-- Contenedor de pantalla completa -->
-      <div class="h-screen flex items-center justify-center p-4">
-    
-        <!-- Card rojo con grid de 2 columnas -->
-        <div class="bg-jj-red text-jj-light p-8 rounded-lg shadow-lg w-full max-w-4xl
-                    grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-          
-          <!-- Título ocupa ambas columnas -->
-          <h1 class="col-span-full text-2xl font-bold mb-4">Agregar Nuevo Registro</h1>
-          
-          <!-- Campos del formulario -->
-          <div>
-            <label class="block text-sm font-medium mb-1">Nombre del Asociado</label>
-            <input name="nombre_asociado" required placeholder="Nombre y primer apellido"
-                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Línea</label>
-            <input name="linea" required placeholder="p.ej. L27"
-                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
-          </div>
-    
-          <div>
-            <label class="block text-sm font-medium mb-1">Supervisor</label>
-            <input name="supervisor" required placeholder="Nombre y apellido"
-                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Tipo de Proceso</label>
-            <select name="tipo_proceso" required
-                    class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none">
-              <option value="">-- seleccionar --</option>
-              <option value="SW">SW</option>
-              <option value="WD">WD</option>
-            </select>
-          </div>
-    
-          <div class="md:col-span-full">
-            <label class="block text-sm font-medium mb-1">Proceso (descripción)</label>
-            <input name="proceso" required placeholder="p.ej. Drill"
-                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
-          </div>
-    
-          <div>
-            <label class="block text-sm font-medium mb-1">Eficiencia del Asociado (%)</label>
-            <input name="eficiencia_asociado" type="number" step="0.1" required
-                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Semana del Año (1–53)</label>
-            <input name="semana" type="number" min="1" max="53" required
-                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
-          </div>
-    
-          <div>
-            <label class="block text-sm font-medium mb-1">Turno</label>
-            <input name="turno" required placeholder="p.ej. 1er, 2do, 3er"
-                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Piezas</label>
-            <input name="piezas" type="number" min="0" step="1"
-                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
-          </div>
-    
-          <div class="md:col-span-full">
-            <label class="block text-sm font-medium mb-1">Tiempo Muerto (minutos)</label>
-            <input name="tiempo_muerto" type="number" min="0" step="0.1"
-                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"
-                   placeholder="p.ej. 15.5 (opcional)"/>
-          </div>
-    
-          <!-- Botón ocupa ambas columnas -->
-          <div class="col-span-full">
-            <button type="submit"
-                    class="w-full bg-jj-light text-jj-red font-semibold py-3 rounded-md hover:bg-gray-200 transition">
-              Guardar Registro
-            </button>
-          </div>
-    
-        </div>
-      </div>
-    </body>
-    
-    
-    
-
-  <!-- Tailwind Play CDN + configuración de colores y tipografía -->
+   <!-- Tailwind Play CDN + configuración de colores y tipografía -->
 <script>
   tailwind.config = {
     theme: {
@@ -122,6 +25,115 @@
   }
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-jj-red font-sans">
+
+  <div class="h-screen flex flex-col items-center justify-center p-4">
+    <!-- Logo J&J centrado -->
+    <div class="mb-8">
+      <img src="/static/img/jj-logo-white.png"
+           alt="Johnson & Johnson"
+           class="h-16 mx-auto"/>
+    </div>
+
+    <!-- Formulario en grid de 2 columnas -->
+    <form id="efForm"
+          class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+      <!-- Campo: Nombre -->
+      <div>
+        <label class="block text-jj-light font-bold mb-2">Nombre del Asociado</label>
+        <input name="nombre_asociado" required
+               class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
+      </div>
+      <!-- Campo: Línea -->
+      <div>
+        <label class="block text-jj-light font-bold mb-2">Línea</label>
+        <input name="linea" required placeholder="p.ej. L27"
+               class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
+      </div>
+
+      <!-- Campo: Supervisor -->
+      <div>
+        <label class="block text-jj-light font-bold mb-2">Supervisor</label>
+        <input name="supervisor" required
+               class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
+      </div>
+      <!-- Campo: Tipo de Proceso -->
+      <div>
+        <label class="block text-jj-light font-bold mb-2">Tipo de Proceso</label>
+        <select name="tipo_proceso" required
+                class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none">
+          <option value="">-- seleccionar --</option>
+          <option value="SW">SW</option>
+          <option value="WD">WD</option>
+        </select>
+      </div>
+
+      <!-- Campo: Proceso -->
+      <div class="md:col-span-2">
+        <label class="block text-jj-light font-bold mb-2">Proceso (descripción)</label>
+        <input name="proceso" required
+               class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
+      </div>
+
+      <!-- Campo: Eficiencia Asociado -->
+      <div>
+        <label class="block text-jj-light font-bold mb-2">Eficiencia del Asociado (%)</label>
+        <input name="eficiencia_asociado" type="number" step="0.1" required
+               class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
+      </div>
+      <!-- Campo: Semana -->
+      <div>
+        <label class="block text-jj-light font-bold mb-2">Semana del Año (1–53)</label>
+        <input name="semana" type="number" min="1" max="53" required
+               class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
+      </div>
+
+      <!-- Campo: Turno -->
+      <div>
+        <label class="block text-jj-light font-bold mb-2">Turno</label>
+        <input name="turno" required
+               class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
+      </div>
+      <!-- Campo: Piezas -->
+      <div>
+        <label class="block text-jj-light font-bold mb-2">Piezas</label>
+        <input name="piezas" type="number" min="0" step="1"
+               class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
+      </div>
+
+      <!-- Campo: Tiempo Muerto -->
+      <div class="md:col-span-2">
+        <label class="block text-jj-light font-bold mb-2">Tiempo Muerto (min)</label>
+        <input name="tiempo_muerto" type="number" min="0" step="0.1"
+               class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"
+               placeholder="Opcional"/>
+      </div>
+
+      <!-- Botón ENVIAR centrado -->
+      <div class="md:col-span-2 flex justify-center">
+        <button type="submit"
+                class="bg-green-600 text-jj-light font-bold px-8 py-3 rounded-md hover:bg-green-700 transition">
+          ENVIAR
+        </button>
+      </div>
+    </form>
+
+    <!-- Footer con enlaces -->
+    <footer class="mt-12 text-center text-jj-light text-sm">
+      <a href="#" class="underline mx-2">Privacy Policy</a>
+      <a href="#" class="underline mx-2">Legal Notice</a><br/>
+      &copy; Johnson &amp; Johnson, Inc. 2025
+    </footer>
+  </div>
+
+  <!-- Tu script existente aquí -->
+  <script src="/static/js/dashboard.js"></script>
+</body>
+    
+    
+    
+
 
 
   <script>
