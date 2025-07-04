@@ -17,39 +17,48 @@
 
     <!-- Filtros -->
     
-    <aside class="bg-jj-light p-6 rounded-lg shadow-md mb-8 w-full max-w-sm">
-      <h2 class="text-xl font-semibold mb-4">Filtros</h2>
-      <div class="space-y-4">
+    <aside class="sticky top-4 bg-jj-light p-6 rounded-xl shadow-lg w-full max-w-xs mx-auto">
+      <h2 class="text-2xl font-bold text-jj-red mb-6">Filtros</h2>
+      <div class="space-y-5">
         <div>
-          <label for="filterStart" class="block text-sm font-medium">Fecha Inicio</label>
+          <label for="filterStart" class="block text-sm font-medium text-jj-dark mb-1">
+            Fecha Inicio
+          </label>
           <input id="filterStart" type="date"
-                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red focus:border-transparent"/>
         </div>
         <div>
-          <label for="filterEnd" class="block text-sm font-medium">Fecha Fin</label>
+          <label for="filterEnd" class="block text-sm font-medium text-jj-dark mb-1">
+            Fecha Fin
+          </label>
           <input id="filterEnd" type="date"
-                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red focus:border-transparent"/>
         </div>
         <div>
-          <label for="filterLinea" class="block text-sm font-medium">Línea</label>
+          <label for="filterLinea" class="block text-sm font-medium text-jj-dark mb-1">
+            Línea
+          </label>
           <select id="filterLinea"
-                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red focus:border-transparent">
             <option value="">-- Todas --</option>
           </select>
         </div>
         <div>
-          <label for="filterProceso" class="block text-sm font-medium">Proceso</label>
+          <label for="filterProceso" class="block text-sm font-medium text-jj-dark mb-1">
+            Proceso
+          </label>
           <select id="filterProceso"
-                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red focus:border-transparent">
             <option value="">-- Todos --</option>
           </select>
         </div>
         <button id="applyFilters"
-                class="w-full bg-jj-red text-jj-light py-2 rounded-md hover:bg-red-700 transition">
+                class="block w-full text-center bg-jj-red text-jj-light font-semibold py-2 rounded-lg hover:bg-red-700 transition">
           Aplicar filtros
         </button>
       </div>
     </aside>
+    
     
     
 
