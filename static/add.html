@@ -14,71 +14,79 @@
       📊 Ver Dashboard
     </button>
 
-    <h1>Agregar Nuevo Registro</h1>
-
-    <!-- Tarjeta de formulario -->
-    <form id="efForm" class="form-card">
-      <div class="form-group">
-        <label>Nombre del Asociado</label>
-        <input name="nombre_asociado" required placeholder="Nombre y primer apellido" />
+    <body class="bg-jj-gray font-sans min-h-screen flex items-center justify-center">
+      <div class="bg-jj-light p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-6 text-center">Agregar Nuevo Registro</h1>
+        <form id="efForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium">Nombre del Asociado</label>
+            <input name="nombre_asociado" required
+                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red"
+                   placeholder="Nombre y primer apellido"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Línea</label>
+            <input name="linea" required
+                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red"
+                   placeholder="p.ej. L27"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Supervisor</label>
+            <input name="supervisor" required
+                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red"
+                   placeholder="Nombre y apellido"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Tipo de Proceso</label>
+            <select name="tipo_proceso" required
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+              <option value="">-- seleccionar --</option>
+              <option value="SW">SW</option>
+              <option value="WD">WD</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Proceso (descripción)</label>
+            <input name="proceso" required
+                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red"
+                   placeholder="p.ej. Drill"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Eficiencia del Asociado (%)</label>
+            <input name="eficiencia_asociado" type="number" step="0.1" required
+                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Semana del Año (1–53)</label>
+            <input name="semana" type="number" min="1" max="53" required
+                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Turno</label>
+            <input name="turno" required
+                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red"
+                   placeholder="p.ej. 1er, 2do, 3er"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Piezas</label>
+            <input name="piezas" type="number" min="0" step="1"
+                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Tiempo Muerto (minutos)</label>
+            <input name="tiempo_muerto" type="number" min="0" step="0.1"
+                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red"
+                   placeholder="p.ej. 15.5 (opcional)"/>
+          </div>
+          <button type="submit"
+                  class="w-full bg-jj-red text-jj-light py-2 rounded-md hover:bg-red-700 transition">
+            Guardar Registro
+          </button>
+        </form>
+        <div id="msg" class="mt-4 text-center text-sm text-red-600"></div>
       </div>
-
-      <div class="form-group">
-        <label>Línea</label>
-        <input name="linea" required placeholder="p.ej. L27" />
-      </div>
-
-      <div class="form-group">
-        <label>Supervisor</label>
-        <input name="supervisor" required placeholder="Nombre y apellido" />
-      </div>
-
-      <div class="form-group">
-        <label>Tipo de Proceso</label>
-        <select name="tipo_proceso" required>
-          <option value="">-- seleccionar --</option>
-          <option value="SW">SW</option>
-          <option value="WD">WD</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-  <label>Piezas Producidas</label>
-  <input name="piezas" type="number" min="1" step="1" required placeholder="p.ej. 500" />
-</div>
-
-
-      <div class="form-group">
-        <label>Proceso (descripción)</label>
-        <input name="proceso" required placeholder="p.ej. Drill" />
-      </div>
-
-      <div class="form-group">
-        <label>Eficiencia del Asociado (%)</label>
-        <input name="eficiencia_asociado" type="number" step="0.1" required />
-      </div>
-
-      <div class="form-group">
-        <label>Semana del Año (1–53)</label>
-        <input name="semana" type="number" min="1" max="53" required />
-      </div>
-
-      <div class="form-group">
-        <label>Turno</label>
-        <input name="turno" required placeholder="p.ej. 1er, 2do, 3er" />
-      </div>
-
-        <!-- …otros form-groups… -->
-    <div class="form-group">
-    <label>Tiempo Muerto (minutos)</label>
-    <input name="tiempo_muerto" type="number" min="0" step="0.1"placeholder="p.ej. 15.5 (opcional)" />
-    </div>
-    <button type="submit" class="btn-primary">Guardar Registro</button>
-
-    </form>
-
-    <div class="msg" id="msg"></div>
-  </div>
+    </body>
+    
 
   <!-- Tailwind Play CDN + configuración de colores y tipografía -->
 <script>

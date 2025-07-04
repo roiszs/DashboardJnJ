@@ -16,51 +16,34 @@
     <h1>Dashboard de Eficiencias</h1>
 
     <!-- Filtros -->
-    <div id="filters">
-      <label>Fecha inicio:
-        <input type="date" id="filterStart">
-      </label>
-      <label>Fecha fin:
-        <input type="date" id="filterEnd">
-      </label>
-      <label>Línea:
-        <select id="filterLinea">
-          <option value="">Todas</option>
-        </select>
-      </label>
-      <label>Proceso:
-        <select id="filterProceso">
-          <option value="">Todos</option>
-        </select>
-      </label>
-      <button id="applyFilters">Aplicar filtros</button>
-    </div>
     
-    <aside class="bg-jj-light p-6 rounded-lg shadow-md mb-8">
-      <h2 class="text-lg font-semibold mb-4">Filtros</h2>
-      <!-- tu formulario: cada label se convierte en bloque Tailwind -->
+    <aside class="bg-jj-light p-6 rounded-lg shadow-md mb-8 w-full max-w-sm">
+      <h2 class="text-xl font-semibold mb-4">Filtros</h2>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium">Fecha Inicio</label>
+          <label for="filterStart" class="block text-sm font-medium">Fecha Inicio</label>
           <input id="filterStart" type="date"
                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
         </div>
         <div>
-          <label class="block text-sm font-medium">Fecha Fin</label>
+          <label for="filterEnd" class="block text-sm font-medium">Fecha Fin</label>
           <input id="filterEnd" type="date"
                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
         </div>
         <div>
-          <label class="block text-sm font-medium">Linea</label>
-          <input id="filterLinea" option value="">Todas</option> 
-                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+          <label for="filterLinea" class="block text-sm font-medium">Línea</label>
+          <select id="filterLinea"
+                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+            <option value="">-- Todas --</option>
+          </select>
         </div>
         <div>
-          <label class="block text-sm font-medium">Proceso</label>
-          <input id="filterProceso" option value="">Todos</option>
-                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+          <label for="filterProceso" class="block text-sm font-medium">Proceso</label>
+          <select id="filterProceso"
+                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+            <option value="">-- Todos --</option>
+          </select>
         </div>
-        <!-- Repite para Fecha Fin, Línea, Proceso -->
         <button id="applyFilters"
                 class="w-full bg-jj-red text-jj-light py-2 rounded-md hover:bg-red-700 transition">
           Aplicar filtros
@@ -68,11 +51,12 @@
       </div>
     </aside>
     
+    
 
     <!-- Botón para agregar registro -->
     <nav class="bg-jj-red text-jj-light p-4 rounded shadow-md mb-6">
       <div class="container mx-auto flex items-center justify-between">
-        <h1 class="text-xl font-bold">Johnson &amp; Johnson Dashboard</h1>
+        <h1 class="text-2xl font-bold">Johnson &amp; Johnson Dashboard</h1>
         <a href="/add.html"
            class="bg-jj-light text-jj-red px-4 py-2 rounded hover:bg-jj-red hover:text-jj-light transition">
           + Nuevo Registro
@@ -80,38 +64,60 @@
       </div>
     </nav>
     
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
+        <span class="text-sm text-gray-500">Total de Registros</span>
+        <span class="text-3xl font-bold" id="kpi-total-records">0</span>
+      </div>
+      <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
+        <span class="text-sm text-gray-500">Eficiencia Promedio</span>
+        <span class="text-3xl font-bold" id="kpi-average-efficiency">0%</span>
+      </div>
+      <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
+        <span class="text-sm text-gray-500">Mejor Línea</span>
+        <span class="text-3xl font-bold" id="kpi-best-line">—</span>
+      </div>
+      <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
+        <span class="text-sm text-gray-500">Tiempo Muerto Semanal</span>
+        <span class="text-3xl font-bold" id="kpi-downtime">0 min</span>
+      </div>
+    </div>
+    
+    
 
     <!-- Gráficas en grid -->
-    <div class="dashboard-grid">
-      <section>
-        <h2>Eficiencia Semanal por Proceso</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <section class="bg-jj-light p-4 rounded-lg shadow">
+        <h3 class="font-semibold mb-2">Eficiencia Semanal por Proceso</h3>
         <canvas id="weeklyChart" width="800" height="300"></canvas>
       </section>
-      <section>
-        <h2>Eficiencia Diaria por Proceso</h2>
+      <section class="bg-jj-light p-4 rounded-lg shadow">
+        <h3 class="font-semibold mb-2">Eficiencia Diaria por Proceso</h3>
         <canvas id="dailyProcessChart" width="800" height="300"></canvas>
       </section>
-      <section>
-        <h2>Eficiencia Diaria por Línea</h2>
+      <section class="bg-jj-light p-4 rounded-lg shadow">
+        <h3 class="font-semibold mb-2">Eficiencia Diaria por Línea</h3>
         <canvas id="dailyLineChart" width="800" height="300"></canvas>
       </section>
-      <section>
-        <h2>Top 5 de asociados con peor eficiencia</h2>
+      <section class="bg-jj-light p-4 rounded-lg shadow">
+        <h3 class="font-semibold mb-2">Top 5 Peores Asociados</h3>
         <canvas id="topAssocChart" width="800" height="300"></canvas>
       </section>
-      <section>
-        <h2>Eficiencia Promedio por Turno</h2>
+      <section class="bg-jj-light p-4 rounded-lg shadow">
+        <h3 class="font-semibold mb-2">Eficiencia Promedio por Turno</h3>
         <canvas id="shiftChart" width="800" height="300"></canvas>
       </section>
-      <section>
-        <h2>Conteo de SW vs WD por Línea</h2>
+      <section class="bg-jj-light p-4 rounded-lg shadow">
+        <h3 class="font-semibold mb-2">Conteo de SW vs WD por Línea</h3>
         <canvas id="countChart" width="800" height="300"></canvas>
       </section>
+      <section class="bg-jj-light p-4 rounded-lg shadow">
+        <h3 class="font-semibold mb-2">Tiempo Muerto Semanal por Línea</h3>
+        <canvas id="downtimeChart" width="800" height="300"></canvas>
+      </section>
     </div>
-    <section>
-    <h2>Tiempo Muerto Semanal por Línea</h2>
-    <canvas id="downtimeChart" width="800" height="300"></canvas>
-    </section>
+    
 
 
     <!-- Tabla de registros -->
