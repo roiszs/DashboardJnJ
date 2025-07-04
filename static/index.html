@@ -35,6 +35,39 @@
       </label>
       <button id="applyFilters">Aplicar filtros</button>
     </div>
+    
+    <aside class="bg-jj-light p-6 rounded-lg shadow-md mb-8">
+      <h2 class="text-lg font-semibold mb-4">Filtros</h2>
+      <!-- tu formulario: cada label se convierte en bloque Tailwind -->
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium">Fecha Inicio</label>
+          <input id="filterStart" type="date"
+                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Fecha Fin</label>
+          <input id="filterEnd" type="date"
+                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Linea</label>
+          <input id="filterLinea" option value="">Todas</option> 
+                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Proceso</label>
+          <input id="filterProceso" option value="">Todos</option>
+                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-jj-red focus:border-jj-red">
+        </div>
+        <!-- Repite para Fecha Fin, Línea, Proceso -->
+        <button id="applyFilters"
+                class="w-full bg-jj-red text-jj-light py-2 rounded-md hover:bg-red-700 transition">
+          Aplicar filtros
+        </button>
+      </div>
+    </aside>
+    
 
     <!-- Botón para agregar registro -->
     <nav class="bg-jj-red text-jj-light p-4 rounded shadow-md mb-6">
