@@ -7,60 +7,55 @@
   <!-- Enlaza el CSS que montas en /static -->
   <link rel="stylesheet" href="/static/style.css" />
    <!-- Tailwind Play CDN + configuración de colores y tipografía -->
+<!-- Tailwind + tu paleta J&J -->
 <script>
   tailwind.config = {
     theme: {
       extend: {
         colors: {
-          'jj-red':   '#E2231A',
-          'jj-gray':  '#F5F5F5',
-          'jj-dark':  '#333333',
+          'jj-red':   '#8A0000',
           'jj-light': '#FFFFFF'
         },
         fontFamily: {
-          sans: ['Source Sans Pro', 'ui-sans-serif', 'system-ui']
+          sans: ['Source Sans Pro','ui-sans-serif','system-ui']
         }
       }
     }
   }
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-jj-red font-sans">
 
-  <div class="h-screen flex flex-col items-center justify-center p-4">
-    <!-- Logo J&J centrado -->
+</head>
+<body class="bg-jj-red font-sans overflow-auto">
+  <div class="min-h-screen flex flex-col items-center justify-start py-8 px-4">
+    <!-- Logo J&J -->
     <div class="mb-8">
-      <img src="/static/img/jj-logo-white.png"
-           alt="Johnson & Johnson"
-           class="h-16 mx-auto"/>
+      <img src="/static/img/jj-logo-white.png" alt="JJ" class="h-16" />
     </div>
 
-    <!-- Formulario en grid de 2 columnas -->
+    <!-- Formulario -->
     <form id="efForm"
-          class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
-      <!-- Campo: Nombre -->
+          class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
       <div>
-        <label class="block text-jj-light font-bold mb-2">Nombre del Asociado</label>
+        <label class="block text-jj-light font-bold mb-1">
+          Nombre del Asociado
+        </label>
         <input name="nombre_asociado" required
                class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
       </div>
-      <!-- Campo: Línea -->
       <div>
-        <label class="block text-jj-light font-bold mb-2">Línea</label>
+        <label class="block text-jj-light font-bold mb-1">Línea</label>
         <input name="linea" required placeholder="p.ej. L27"
                class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
       </div>
 
-      <!-- Campo: Supervisor -->
       <div>
-        <label class="block text-jj-light font-bold mb-2">Supervisor</label>
+        <label class="block text-jj-light font-bold mb-1">Supervisor</label>
         <input name="supervisor" required
                class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
       </div>
-      <!-- Campo: Tipo de Proceso -->
       <div>
-        <label class="block text-jj-light font-bold mb-2">Tipo de Proceso</label>
+        <label class="block text-jj-light font-bold mb-1">Tipo de Proceso</label>
         <select name="tipo_proceso" required
                 class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none">
           <option value="">-- seleccionar --</option>
@@ -69,49 +64,50 @@
         </select>
       </div>
 
-      <!-- Campo: Proceso -->
       <div class="md:col-span-2">
-        <label class="block text-jj-light font-bold mb-2">Proceso (descripción)</label>
+        <label class="block text-jj-light font-bold mb-1">
+          Proceso (descripción)
+        </label>
         <input name="proceso" required
                class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
       </div>
 
-      <!-- Campo: Eficiencia Asociado -->
       <div>
-        <label class="block text-jj-light font-bold mb-2">Eficiencia del Asociado (%)</label>
+        <label class="block text-jj-light font-bold mb-1">
+          Eficiencia del Asociado (%)
+        </label>
         <input name="eficiencia_asociado" type="number" step="0.1" required
                class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
       </div>
-      <!-- Campo: Semana -->
       <div>
-        <label class="block text-jj-light font-bold mb-2">Semana del Año (1–53)</label>
+        <label class="block text-jj-light font-bold mb-1">
+          Semana del Año (1–53)
+        </label>
         <input name="semana" type="number" min="1" max="53" required
                class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
       </div>
 
-      <!-- Campo: Turno -->
       <div>
-        <label class="block text-jj-light font-bold mb-2">Turno</label>
+        <label class="block text-jj-light font-bold mb-1">Turno</label>
         <input name="turno" required
                class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
       </div>
-      <!-- Campo: Piezas -->
       <div>
-        <label class="block text-jj-light font-bold mb-2">Piezas</label>
+        <label class="block text-jj-light font-bold mb-1">Piezas</label>
         <input name="piezas" type="number" min="0" step="1"
                class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"/>
       </div>
 
-      <!-- Campo: Tiempo Muerto -->
       <div class="md:col-span-2">
-        <label class="block text-jj-light font-bold mb-2">Tiempo Muerto (min)</label>
+        <label class="block text-jj-light font-bold mb-1">
+          Tiempo Muerto (min)
+        </label>
         <input name="tiempo_muerto" type="number" min="0" step="0.1"
                class="w-full bg-jj-light text-black rounded-md px-3 py-2 focus:outline-none"
                placeholder="Opcional"/>
       </div>
 
-      <!-- Botón ENVIAR centrado -->
-      <div class="md:col-span-2 flex justify-center">
+      <div class="md:col-span-2 flex justify-center mt-4">
         <button type="submit"
                 class="bg-green-600 text-jj-light font-bold px-8 py-3 rounded-md hover:bg-green-700 transition">
           ENVIAR
@@ -119,7 +115,7 @@
       </div>
     </form>
 
-    <!-- Footer con enlaces -->
+    <!-- Footer -->
     <footer class="mt-12 text-center text-jj-light text-sm">
       <a href="#" class="underline mx-2">Privacy Policy</a>
       <a href="#" class="underline mx-2">Legal Notice</a><br/>
@@ -127,10 +123,10 @@
     </footer>
   </div>
 
-  <!-- Tu script existente aquí -->
+  <!-- Tu JS -->
   <script src="/static/js/dashboard.js"></script>
 </body>
-    
+
     
     
 
