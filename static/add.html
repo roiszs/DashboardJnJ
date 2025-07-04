@@ -14,85 +14,92 @@
       📊 Ver Dashboard
     </button>
 
-    <body class="bg-jj-gray font-sans min-h-screen flex items-center justify-center p-4">
-      <div class="bg-jj-light p-8 rounded-xl shadow-lg w-full max-w-2xl">
-        <div class="flex items-center justify-between mb-6">
-          <h1 class="text-2xl font-bold text-jj-red">Agregar Nuevo Registro</h1>
-          <a href="/" class="inline-flex items-center bg-jj-red text-jj-light px-4 py-2 rounded-lg hover:bg-red-700 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9 2a1 1 0 011 1v6h6a1 1 0 110 2H10v6a1 1 0 11-2 0V11H2a1 1 0 110-2h6V3a1 1 0 011-1z"/>
-            </svg>
-            Ver Dashboard
-          </a>
-        </div>
+    <body class="bg-jj-gray font-sans">
+
+      <!-- Contenedor de pantalla completa -->
+      <div class="h-screen flex items-center justify-center p-4">
     
-        <form id="efForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Card rojo con grid de 2 columnas -->
+        <div class="bg-jj-red text-jj-light p-8 rounded-lg shadow-lg w-full max-w-4xl
+                    grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+          
+          <!-- Título ocupa ambas columnas -->
+          <h1 class="col-span-full text-2xl font-bold mb-4">Agregar Nuevo Registro</h1>
+          
+          <!-- Campos del formulario -->
           <div>
-            <label class="block text-sm font-medium text-jj-dark mb-1">Nombre del Asociado</label>
+            <label class="block text-sm font-medium mb-1">Nombre del Asociado</label>
             <input name="nombre_asociado" required placeholder="Nombre y primer apellido"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red"/>
+                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
           </div>
           <div>
-            <label class="block text-sm font-medium text-jj-dark mb-1">Línea</label>
+            <label class="block text-sm font-medium mb-1">Línea</label>
             <input name="linea" required placeholder="p.ej. L27"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red"/>
+                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
           </div>
+    
           <div>
-            <label class="block text-sm font-medium text-jj-dark mb-1">Supervisor</label>
+            <label class="block text-sm font-medium mb-1">Supervisor</label>
             <input name="supervisor" required placeholder="Nombre y apellido"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red"/>
+                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
           </div>
           <div>
-            <label class="block text-sm font-medium text-jj-dark mb-1">Tipo de Proceso</label>
+            <label class="block text-sm font-medium mb-1">Tipo de Proceso</label>
             <select name="tipo_proceso" required
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red">
+                    class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none">
               <option value="">-- seleccionar --</option>
               <option value="SW">SW</option>
               <option value="WD">WD</option>
             </select>
           </div>
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-jj-dark mb-1">Proceso (descripción)</label>
+    
+          <div class="md:col-span-full">
+            <label class="block text-sm font-medium mb-1">Proceso (descripción)</label>
             <input name="proceso" required placeholder="p.ej. Drill"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red"/>
+                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
           </div>
+    
           <div>
-            <label class="block text-sm font-medium text-jj-dark mb-1">Eficiencia del Asociado (%)</label>
+            <label class="block text-sm font-medium mb-1">Eficiencia del Asociado (%)</label>
             <input name="eficiencia_asociado" type="number" step="0.1" required
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red"/>
+                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
           </div>
           <div>
-            <label class="block text-sm font-medium text-jj-dark mb-1">Semana del Año (1–53)</label>
+            <label class="block text-sm font-medium mb-1">Semana del Año (1–53)</label>
             <input name="semana" type="number" min="1" max="53" required
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red"/>
+                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
           </div>
+    
           <div>
-            <label class="block text-sm font-medium text-jj-dark mb-1">Turno</label>
+            <label class="block text-sm font-medium mb-1">Turno</label>
             <input name="turno" required placeholder="p.ej. 1er, 2do, 3er"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red"/>
+                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
           </div>
           <div>
-            <label class="block text-sm font-medium text-jj-dark mb-1">Piezas</label>
+            <label class="block text-sm font-medium mb-1">Piezas</label>
             <input name="piezas" type="number" min="0" step="1"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red"/>
+                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"/>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-jj-dark mb-1">Tiempo Muerto (minutos)</label>
+    
+          <div class="md:col-span-full">
+            <label class="block text-sm font-medium mb-1">Tiempo Muerto (minutos)</label>
             <input name="tiempo_muerto" type="number" min="0" step="0.1"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jj-red"
+                   class="w-full bg-white text-jj-dark rounded-md px-3 py-2 focus:outline-none"
                    placeholder="p.ej. 15.5 (opcional)"/>
           </div>
-          <div class="md:col-span-2">
+    
+          <!-- Botón ocupa ambas columnas -->
+          <div class="col-span-full">
             <button type="submit"
-                    class="w-full bg-jj-red text-jj-light py-2 rounded-lg font-semibold hover:bg-red-700 transition">
+                    class="w-full bg-jj-light text-jj-red font-semibold py-3 rounded-md hover:bg-gray-200 transition">
               Guardar Registro
             </button>
           </div>
-        </form>
     
-        <div id="msg" class="mt-4 text-center text-sm text-red-600"></div>
+        </div>
       </div>
     </body>
+    
     
     
 
