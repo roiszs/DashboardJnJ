@@ -190,6 +190,7 @@
     async function renderDashboard(){ /*…igual…*/ }
   
     async function renderWeekly(){ /*…igual…*/ }
+    async function renderKPIs(){/*…igual…*/ }
     async function renderDailyProcess(){ /*…igual…*/ }
     async function renderDailyLine(){ /*…igual…*/ }
     async function renderWorstAssociates(){ /*…igual…*/ }
@@ -199,6 +200,7 @@
   
     async function renderAll(){
       await safeRender(renderDashboard);
+      await safeRender(renderKPIs); 
       await safeRender(renderWeekly);
       await safeRender(renderDailyProcess);
       await safeRender(renderDailyLine);
@@ -511,6 +513,7 @@ async function renderKPIs() {
   // Llamada única a todos
   async function renderAll() {
     await safeRender(renderDashboard);
+    await safeRender(renderKPIs); 
     await safeRender(renderWeekly);
     await safeRender(renderDailyProcess);
     await safeRender(renderDailyLine);
