@@ -275,6 +275,49 @@
   // ============
   // RENDERS
   // ============
+async function renderKPIs() {
+  const qs = getFilterQS();
+
+  // 1) Registros y eficiencia
+  const data = await fetch('/api/eficiencias' + qs).then(r => r.json());
+  const total = data.length;
+  document.getElementById('kpi-total-records').textContent = total;
+
+  const sumEff = data.reduce((sum, r) => sum + r.eficiencia_asociado, 0);
+  const avgEff = total
+    ? (sumEff / total).toFixed(1) + '%'
+    : '0%';
+  document.getElementById('kpi-average-efficiency').textContent = avgEff;
+
+  // 2) Mejor línea (la que tenga mayor eficiencia promedio)
+  const lineMap = {};
+  data.forEach(r => {
+    (lineMap[r.linea] ||= []).push(r.eficiencia_asociado);
+  });
+  let bestLine = '—', bestAvg = -Infinity;
+  for (const [line, arr] of Object.entries(lineMap)) {
+    const avg = arr.reduce((a,b)=>a+b,0) / arr.length;
+    if (avg > bestAvg) {
+      bestAvg = avg;
+      bestLine = line;
+    }
+  }
+  document.getElementById('kpi-best-line').textContent = bestLine;
+
+  // 3) Downtime semanal (promedio de la semana más reciente)
+  const dtData = await fetch('/api/eficiencias/weekly/downtime' + qs)
+                        .then(r => r.json());
+  if (dtData.length) {
+    // encuentra la semana máxima
+    const maxSemana = Math.max(...dtData.map(r => r.semana));
+    const recs = dtData.filter(r => r.semana === maxSemana);
+    const avgDow = recs.reduce((sum,r)=>sum+r.avg_downtime,0) / recs.length;
+    document.getElementById('kpi-downtime').textContent =
+      `${avgDow.toFixed(1)} min`;
+  } else {
+    document.getElementById('kpi-downtime').textContent = '0 min';
+  }
+}
 
   async function renderDashboard() {
     const data = await (await fetch('/api/eficiencias' + getFilterQS())).json();
