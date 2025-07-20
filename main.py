@@ -192,33 +192,40 @@ def eficiencia_diaria_linea(
 
 @app.get("/api/eficiencias/top-associates")
 def worst_associados(
-    start: Optional[date] = None,
-    end: Optional[date] = None,
-    linea: Optional[str] = None,
-    proceso: Optional[str] = None,
-    limit: int = 5,
-    db: Session = Depends(get_db),
+    start:   Optional[date] = None,
+    end:     Optional[date] = None,
+    linea:   Optional[str]  = None,
+    proceso: Optional[str]  = None,
+    limit:   int            = 5,
+    db:      Session        = Depends(get_db),
 ):
-    sub = db.query(
-        models.Eficiencia.nombre_asociado.label("nombre"),
-        func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
-    )
-    if start:
-        sub = sub.filter(models.Eficiencia.fecha >= start)
-    if end:
-        sub = sub.filter(models.Eficiencia.fecha <= end)
-    if linea:
-        sub = sub.filter(models.Eficiencia.linea == linea)
-    if proceso:
-        sub = sub.filter(models.Eficiencia.proceso == proceso)
+    # 1) Base query
+    q = db.query(models.Eficiencia)
 
-    q = sub.group_by(models.Eficiencia.nombre_asociado) \
-           .order_by(func.avg(models.Eficiencia.eficiencia_asociado).asc()) \
-           .limit(limit)
+    # 2) Aplica filtros si vienen
+    if start:
+        q = q.filter(models.Eficiencia.fecha >= start)
+    if end:
+        q = q.filter(models.Eficiencia.fecha <= end)
+    if linea:
+        q = q.filter(models.Eficiencia.linea == linea)
+    if proceso:
+        q = q.filter(models.Eficiencia.proceso == proceso)
+
+    # 3) Agrupa por asociado y calcula avg, ordena ascendente (los peores primero)
+    q2 = (
+        q.with_entities(
+            models.Eficiencia.nombre_asociado.label("nombre"),
+            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
+        )
+        .group_by(models.Eficiencia.nombre_asociado)
+        .order_by(func.avg(models.Eficiencia.eficiencia_asociado).asc())
+        .limit(limit)
+    )
 
     return [
         {"nombre": nombre, "promedio_asociado": float(round(prom, 2))}
-        for nombre, prom in q.all()
+        for nombre, prom in q2.all()
     ]
 
 @app.get("/api/eficiencias/shift")

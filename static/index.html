@@ -608,12 +608,22 @@ async function renderDailyLine() {
   let topAssocChartInstance;
 
 async function renderTopAssociates() {
-  const data = await (await fetch('/api/eficiencias/top-associates?limit=5')).json();
+  // 1) Construye la QS de filtros
+  const qs = getFilterQS();                // ej. "?start=2025-07-14&end=2025-07-18&linea=L28"
+  const sep = qs ? '&' : '?';              // si qs existe, usamos '&', si no '?'
+  const url = `/api/eficiencias/top-associates${qs}${sep}limit=5`;
+
+  // 2) Lanza la petición
+  const data = await (await fetch(url)).json();
+
+  // 3) Destroza chart anterior si existe
   if (topAssocChartInstance) topAssocChartInstance.destroy();
 
+  // 4) Prepara labels y valores
   const labels = data.map(r => r.nombre);
   const valores = data.map(r => r.promedio_asociado);
 
+  // 5) Dibuja en barras usando PALETTE global
   topAssocChartInstance = new Chart(
     document.getElementById('topAssocChart'),
     {
