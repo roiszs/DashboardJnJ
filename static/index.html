@@ -667,6 +667,47 @@ async function renderShift() {
   );
 }
 
+let countChartInstance;
+
+async function renderCounts() {
+  const data = await fetch('/api/eficiencias/counts' + getFilterQS()).then(r => r.json());
+  if (countChartInstance) countChartInstance.destroy();
+
+  const lineas = [...new Set(data.map(r => r.linea))];
+  const swCounts = lineas.map(l =>
+    data.find(r => r.linea === l && r.tipo_proceso==='SW')?.total_piezas || 0
+  );
+  const wdCounts = lineas.map(l =>
+    data.find(r => r.linea === l && r.tipo_proceso==='WD')?.total_piezas || 0
+  );
+
+  countChartInstance = new Chart(
+    document.getElementById('countChart'),
+    {
+      type: 'bar',
+      data: {
+        labels: lineas,
+        datasets: [
+          {
+            label: 'SW (piezas)',
+            data: swCounts,
+            backgroundColor: PALETTE[0]
+          },
+          {
+            label: 'WD (piezas)',
+            data: wdCounts,
+            backgroundColor: PALETTE[1]
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true } }
+      }
+    }
+  );
+}
+
 
   async function renderDowntime() {
     const data = await (await fetch('/api/eficiencias/weekly/downtime' + getFilterQS())).json();
