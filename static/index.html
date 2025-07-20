@@ -709,30 +709,44 @@ async function renderCounts() {
 }
 
 
-  async function renderDowntime() {
-    const data = await (await fetch('/api/eficiencias/weekly/downtime' + getFilterQS())).json();
-    const semanas  = [...new Set(data.map(r=>r.semana))].sort((a,b)=>a-b);
-    const lineas   = [...new Set(data.map(r=>r.linea))];
-    const datasets = lineas.map(line=>({
-      label: line,
-      data: semanas.map(sem => {
-        const rec = data.find(r=>r.semana===sem && r.linea===line);
-        return rec ? rec.avg_downtime : 0;
-      }),
-      tension:0.3, pointRadius:4
-    }));
-    createChart('downtimeChart', {
-      type:'line',
-      data:{ labels: semanas, datasets },
-      options:{
-        scales:{
-          x:{ title:{ display:true, text:'Semana' } },
-          y:{ beginAtZero:true, title:{ display:true, text:'Minutos' } }
+let downtimeChartInstance;
+
+async function renderDowntime() {
+  const raw = await fetch('/api/eficiencias/weekly/downtime' + getFilterQS()).then(r=>r.json());
+  if (downtimeChartInstance) downtimeChartInstance.destroy();
+
+  if (!raw.length) return;
+
+  const semanas = [...new Set(raw.map(r => r.semana))].sort((a,b)=>a-b);
+  const lineas  = [...new Set(raw.map(r => r.linea))];
+
+  const datasets = lineas.map((linea, idx) => ({
+    label: linea,
+    data: semanas.map(sem => {
+      const rec = raw.find(r => r.semana===sem && r.linea===linea);
+      return rec ? Number(rec.avg_downtime.toFixed(1)) : 0;
+    }),
+    backgroundColor: PALETTE[idx % PALETTE.length],
+    borderColor: PALETTE[idx % PALETTE.length],
+    tension: 0.3,
+    fill: false
+  }));
+
+  downtimeChartInstance = new Chart(
+    document.getElementById('downtimeChart'),
+    {
+      type: 'bar', // o 'line' si prefieres línea
+      data: { labels: semanas, datasets },
+      options: {
+        scales: {
+          y: { beginAtZero: true, title: { display: true, text: 'Minutos' } },
+          x: { title: { display: true, text: 'Semana' } }
         },
-        plugins:{ legend:{ position:'top' } }
+        plugins: { legend: { position: 'top' } }
       }
-    });
-  }
+    }
+  );
+}
 
   // Llamada única a todos
   async function renderAll() {
