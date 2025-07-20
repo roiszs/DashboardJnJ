@@ -459,23 +459,93 @@ async function renderWeekly() {
 }
 
 
-  async function renderDailyProcess() {
-    const data = await (await fetch('/api/eficiencias/daily/process' + getFilterQS())).json();
-    const fechas   = [...new Set(data.map(r=>r.fecha))];
-    const procesos = [...new Set(data.map(r=>r.proceso))];
-    const datasets = procesos.map(proc=>({
-      label: proc,
+let dailyProcessChartInstance;
+
+async function renderDailyProcess() {
+  const qs = getFilterQS();
+  const raw = await fetch('/api/eficiencias/daily/process' + qs).then(r => r.json());
+
+  if (!raw.length) {
+    if (dailyProcessChartInstance) dailyProcessChartInstance.destroy();
+    const ctx = document.getElementById('dailyProcessChart').getContext('2d');
+    ctx.font = '14px sans-serif';
+    ctx.fillText('Sin datos para el filtro actual', 20, 30);
+    return;
+  }
+
+  // Rank procesos por promedio en el rango
+  const procStats = {};
+  raw.forEach(r => {
+    (procStats[r.proceso] ||= []).push(r.promedio_asociado);
+  });
+  const ranked = Object.entries(procStats)
+    .map(([p, arr]) => [p, arr.reduce((a,b)=>a+b,0)/arr.length])
+    .sort((a,b)=> b[1]-a[1]);
+
+  const TOP_N = 8;
+  const topProcesos = ranked.slice(0, TOP_N).map(([p]) => p);
+  const others = ranked.slice(TOP_N).map(([p]) => p);
+  const fechas = [...new Set(raw.map(r => r.fecha))].sort();
+
+  const datasets = topProcesos.map((proc, idx) => ({
+    label: proc,
+    data: fechas.map(f => {
+      const rec = raw.find(r => r.fecha === f && r.proceso === proc);
+      return rec ? Number(rec.promedio_asociado.toFixed(1)) : 0;
+    }),
+    backgroundColor: PALETTE[idx % PALETTE.length],
+    borderRadius: 4
+  }));
+
+  if (others.length) {
+    datasets.push({
+      label: 'Otros',
       data: fechas.map(f => {
-        const rec = data.find(r=>r.fecha===f && r.proceso===proc);
-        return rec ? rec.promedio_asociado : 0;
-      })
-    }));
-    createChart('dailyProcessChart', {
-      type:'line',
-      data:{ labels: fechas, datasets },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
+        const subset = raw.filter(r => r.fecha === f && others.includes(r.proceso));
+        if (!subset.length) return 0;
+        const avg = subset.reduce((s,r)=>s+r.promedio_asociado,0)/subset.length;
+        return Number(avg.toFixed(1));
+      }),
+      backgroundColor: '#9ca3af',
+      borderRadius: 4
     });
   }
+
+  if (dailyProcessChartInstance) dailyProcessChartInstance.destroy();
+
+  dailyProcessChartInstance = new Chart(
+    document.getElementById('dailyProcessChart'),
+    {
+      type: 'bar',
+      data: { labels: fechas, datasets },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              title: items => items[0].label,
+              label: item => `${item.dataset.label}: ${item.formattedValue}%`
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Fecha' },
+            stacked: false
+          },
+          y: {
+            beginAtZero: true,
+            max: 100,
+            title: { display: true, text: 'Eficiencia (%)' }
+          }
+        }
+      }
+    }
+  );
+}
+
 
   async function renderDailyLine() {
     const data = await (await fetch('/api/eficiencias/daily/line' + getFilterQS())).json();
