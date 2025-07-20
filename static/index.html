@@ -361,29 +361,103 @@ async function renderKPIs() {
     });
   }
 
-  async function renderWeekly() {
-    const data = await (await fetch('/api/eficiencias/weekly' + getFilterQS())).json();
-    const semanas  = [...new Set(data.map(r=>r.semana))].sort((a,b)=>a-b);
-    const procesos = [...new Set(data.map(r=>r.proceso))];
-    const datasets = procesos.map(proc=>({
-      label: proc,
+  let weeklyChartInstance;
+
+async function renderWeekly() {
+  const qs = getFilterQS();
+  const raw = await fetch('/api/eficiencias/weekly' + qs).then(r => r.json());
+
+  if (!raw.length) {
+    if (weeklyChartInstance) { weeklyChartInstance.destroy(); }
+    const ctx = document.getElementById('weeklyChart').getContext('2d');
+    ctx.font = '14px sans-serif';
+    ctx.fillText('Sin datos para el filtro actual', 20, 30);
+    return;
+  }
+
+  // --- Agrupar por proceso y calcular promedios globales para ranking ---
+  const procStats = {};
+  raw.forEach(r => {
+    (procStats[r.proceso] ||= []).push(r.promedio_asociado);
+  });
+  const ranked = Object.entries(procStats)
+    .map(([proceso, arr]) => [proceso, arr.reduce((a,b)=>a+b,0)/arr.length])
+    .sort((a,b) => b[1] - a[1]);
+
+  const TOP_N = 8;
+  const topProcesos = ranked.slice(0, TOP_N).map(([p]) => p);
+  const otherProcesos = ranked.slice(TOP_N).map(([p]) => p);
+  const useOthers = otherProcesos.length > 0;
+
+  // Semanas ordenadas
+  const semanas = [...new Set(raw.map(r => r.semana))].sort((a,b)=>a-b);
+
+  // Construimos dataset para cada proceso top
+  const datasets = topProcesos.map((proc, idx) => ({
+    label: proc,
+    data: semanas.map(sem => {
+      const rec = raw.find(r => r.semana === sem && r.proceso === proc);
+      return rec ? Number(rec.promedio_asociado.toFixed(1)) : 0;
+    }),
+    backgroundColor: PALETTE[idx % PALETTE.length],
+    borderRadius: 4
+  }));
+
+  // Dataset “Otros” (promedio agregado)
+  if (useOthers) {
+    datasets.push({
+      label: 'Otros',
       data: semanas.map(sem => {
-        const rec = data.find(r=>r.semana===sem && r.proceso===proc);
-        return rec ? rec.promedio_asociado : 0;
-      })
-    }));
-    createChart('weeklyChart', {
-      type:'line',
-      data:{ labels: semanas, datasets },
-      options:{
-        scales:{
-          x:{ title:{ display:true, text:'Semana' } },
-          y:{ beginAtZero:true, max:100, title:{ display:true, text:'%' } }
-        },
-        plugins:{ legend:{ position:'top' } }
-      }
+        // promedios de procesos que no son top
+        const subset = raw.filter(r => r.semana === sem && otherProcesos.includes(r.proceso));
+        if (!subset.length) return 0;
+        const avg = subset.reduce((s,r)=>s+r.promedio_asociado,0)/subset.length;
+        return Number(avg.toFixed(1));
+      }),
+      backgroundColor: '#9ca3af',
+      borderRadius: 4
     });
   }
+
+  // Destruir instancia previa
+  if (weeklyChartInstance) weeklyChartInstance.destroy();
+
+  weeklyChartInstance = new Chart(
+    document.getElementById('weeklyChart'),
+    {
+      type: 'bar',
+      data: {
+        labels: semanas,
+        datasets
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              title: items => 'Semana ' + items[0].label,
+              label: item => `${item.dataset.label}: ${item.formattedValue}%`
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Semana' },
+            stacked: false   // cambia a true si quieres apilado
+          },
+            y: {
+            beginAtZero: true,
+            max: 100,
+            title: { display: true, text: 'Eficiencia (%)' }
+          }
+        }
+      }
+    }
+  );
+}
+
 
   async function renderDailyProcess() {
     const data = await (await fetch('/api/eficiencias/daily/process' + getFilterQS())).json();
