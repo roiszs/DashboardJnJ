@@ -547,23 +547,52 @@ async function renderDailyProcess() {
 }
 
 
-  async function renderDailyLine() {
-    const data = await (await fetch('/api/eficiencias/daily/line' + getFilterQS())).json();
-    const fechas = [...new Set(data.map(r=>r.fecha))];
-    const lineas = [...new Set(data.map(r=>r.linea))];
-    const datasets = lineas.map(line=>({
-      label: line,
-      data: fechas.map(f => {
-        const rec = data.find(r=>r.fecha===f && r.linea===line);
-        return rec ? rec.promedio_asociado : 0;
-      })
-    }));
-    createChart('dailyLineChart', {
-      type:'line',
-      data:{ labels: fechas, datasets },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
-    });
+let dailyLineChartInstance;
+
+async function renderDailyLine() {
+  const qs = getFilterQS();
+  const raw = await fetch('/api/eficiencias/daily/line' + qs).then(r => r.json());
+  if (dailyLineChartInstance) dailyLineChartInstance.destroy();
+
+  if (!raw.length) {
+    const ctx = document.getElementById('dailyLineChart').getContext('2d');
+    ctx.font = '14px sans-serif';
+    ctx.fillText('Sin datos', 20, 30);
+    return;
   }
+
+  const fechas = [...new Set(raw.map(r => r.fecha))].sort();
+  const lineas = [...new Set(raw.map(r => r.linea))];
+
+  const datasets = lineas.map((linea, idx) => ({
+    label: linea,
+    data: fechas.map(f => {
+      const rec = raw.find(r => r.fecha === f && r.linea === linea);
+      return rec ? Number(rec.promedio_asociado.toFixed(1)) : 0;
+    }),
+    borderColor: PALETTE[idx % PALETTE.length],
+    backgroundColor: PALETTE[idx % PALETTE.length],
+    fill: false,
+    tension: 0.3,
+    pointRadius: 4
+  }));
+
+  dailyLineChartInstance = new Chart(
+    document.getElementById('dailyLineChart'),
+    {
+      type: 'bar', // si prefieres barras en vez de línea
+      data: { labels: fechas, datasets },
+      options: {
+        scales: {
+          y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } },
+          x: { title: { display: true, text: 'Fecha' } }
+        },
+        plugins: { legend: { position: 'top' } }
+      }
+    }
+  );
+}
+
 
   //async function renderWorstAssociates() {
   //  const data = await (await fetch('/api/eficiencias/top-associates?limit=5' + getFilterQS())).json();
