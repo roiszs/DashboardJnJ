@@ -638,39 +638,35 @@ async function renderTopAssociates() {
 }
 
 
-  async function renderShift() {
-    const data = await (await fetch('/api/eficiencias/shift' + getFilterQS())).json();
-    const labels = data.map(r=>r.turno);
-    const valores= data.map(r=>r.promedio_asociado);
-    createChart('shiftChart', {
-      type:'bar',
-      data:{ labels, datasets:[{ label:'Eficiencia (%)', data: valores }] },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
-    });
-  }
+let shiftChartInstance;
 
-  async function renderCounts() {
-    const data = await (await fetch('/api/eficiencias/counts' + getFilterQS())).json();
-    const lineas  = [...new Set(data.map(r=>r.linea))];
-    const swCounts = lineas.map(()=>0);
-    const wdCounts = lineas.map(()=>0);
-    data.forEach(r=>{
-      const i = lineas.indexOf(r.linea);
-      if(r.tipo_proceso==='SW') swCounts[i]=r.total_piezas;
-      else if(r.tipo_proceso==='WD') wdCounts[i]=r.total_piezas;
-    });
-    createChart('countChart', {
-      type:'bar',
-      data:{
-        labels: lineas,
-        datasets:[
-          { label:'SW (piezas)', data: swCounts },
-          { label:'WD (piezas)', data: wdCounts }
-        ]
+async function renderShift() {
+  const data = await fetch('/api/eficiencias/shift' + getFilterQS()).then(r => r.json());
+  if (shiftChartInstance) shiftChartInstance.destroy();
+
+  const labels = data.map(r => r.turno);
+  const valores = data.map(r => r.promedio_asociado);
+
+  shiftChartInstance = new Chart(
+    document.getElementById('shiftChart'),
+    {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Eficiencia (%)',
+          data: valores,
+          backgroundColor: labels.map((_,i) => PALETTE[i % PALETTE.length])
+        }]
       },
-      options:{ responsive:true, scales:{ y:{ beginAtZero:true } } }
-    });
-  }
+      options: {
+        scales: { y: { beginAtZero: true, max: 100 } },
+        plugins: { legend: { display: false } }
+      }
+    }
+  );
+}
+
 
   async function renderDowntime() {
     const data = await (await fetch('/api/eficiencias/weekly/downtime' + getFilterQS())).json();
