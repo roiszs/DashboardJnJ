@@ -381,6 +381,14 @@ async def upload_eficiencias(
 
     big_df = pd.concat(frames, ignore_index=True)
 
+
+    allowed_cols = {c.name for c in models.Eficiencia.__table__.columns}
+
+    registros = []
+    for row in big_df.to_dict(orient='records'):
+    clean = {k: v for k, v in row.items() if k in allowed_cols}
+    registros.append(models.Eficiencia(**clean))
+
     # 8) Insertar en BD
     registros = [
         models.Eficiencia(**row)
