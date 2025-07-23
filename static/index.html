@@ -137,6 +137,18 @@
         <canvas id="downtimeChart" width="800" height="300"></canvas>
       </section>
     </div>
+
+
+    <!--Boton subir Excel-->
+    <form id="uploadForm" class="flex items-center gap-4 mb-6" enctype="multipart/form-data">
+      <input id="fileInput" type="file" accept=".xls,.xlsx"
+             class="border border-gray-300 rounded px-3 py-2 bg-white" />
+      <button type="submit" class="bg-red-600 text-white font-semibold rounded px-4 py-2 hover:bg-green-600 transition-colors duration-200">
+        📂 Subir Excel
+      </button>
+      <span id="uploadMsg" class="text-sm"></span>
+    </form>
+    
     
 
 
@@ -181,6 +193,33 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
   <script>
+
+//Programacion del boton para subir excel
+document.getElementById('uploadForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const file = document.getElementById('fileInput').files[0];
+  if (!file) {
+    document.getElementById('uploadMsg').textContent = 'Selecciona un archivo primero';
+    return;
+  }
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/eficiencias/upload', {
+      method: 'POST',
+      body: fd
+    });
+    if (!res.ok) throw await res.text();
+    const data = await res.json();
+    document.getElementById('uploadMsg').textContent = `✅ Insertados ${data.insertados} registros`;
+    // refresca todo
+    renderAll();
+  } catch (err) {
+    document.getElementById('uploadMsg').textContent = '❌ Error: ' + err;
+  }
+});
+
+
     // Helpers idénticos a los que te compartí…
     async function safeRender(fn){ try{await fn()}catch(e){console.error(fn.name,e)} }
     function getFilterQS(){ /*…igual…*/ }
