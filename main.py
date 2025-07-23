@@ -331,48 +331,44 @@ async def upload_eficiencias(
     contents = await file.read()
 
     try:
-        # 2) Leer TODAS las hojas del Excel
+        # 2) Leer todas las hojas -> dict {sheet_name: DataFrame}
         sheets = pd.read_excel(io.BytesIO(contents), sheet_name=None)
     except Exception as e:
         raise HTTPException(400, f"Error leyendo el Excel: {e}")
 
     frames = []
     for sheet_name, df in sheets.items():
-        # 3) Extraer número de semana del nombre de la sheet
-        #    Acepta '28', 'Semana 28', 'S28', etc.
+        # 3) Extraer número de semana del nombre de la hoja
         match = re.search(r'(\d{1,2})', sheet_name)
         if not match:
             raise HTTPException(400, f"No pude encontrar número de semana en la hoja '{sheet_name}'")
         semana_val = int(match.group(1))
 
-        # 4) Normalizar columnas: quita espacios, minúsculas
+        # 4) Normalizar headers
         df.columns = [c.strip().lower() for c in df.columns]
 
-        # 5) Columnas requeridas (excepto 'semana', que la llenamos nosotros)
+        # 5) Columnas requeridas (sin 'wwid', 'semana' la ponemos nosotros)
         required = {
-            'nombre_asociado','linea','supervisor',
-            'tipo_proceso','proceso','piezas',
-            'eficiencia_asociado','turno','tiempo_muerto','fecha'
+            'nombre_asociado', 'linea', 'supervisor',
+            'tipo_proceso', 'proceso', 'piezas',
+            'eficiencia_asociado', 'turno', 'tiempo_muerto', 'fecha'
         }
         missing = required - set(df.columns)
         if missing:
             raise HTTPException(400, f"Faltan columnas en '{sheet_name}': {', '.join(missing)}")
 
-        # 6) Asignar columna semana desde el nombre de la hoja
-        df['semana'] = semana_val
+        # 6) Columnas opcionales
+        if 'wwid' not in df.columns:
+            df['wwid'] = None
+        if 'tiempo_muerto' not in df.columns:
+            df['tiempo_muerto'] = None
 
-        # 7) Convertir tipos básicos
+        # 7) Setear semana y convertir tipos
+        df['semana'] = semana_val
         df['piezas'] = pd.to_numeric(df['piezas'], errors='coerce').fillna(0).astype(int)
         df['eficiencia_asociado'] = pd.to_numeric(df['eficiencia_asociado'], errors='coerce').fillna(0.0)
         df['tiempo_muerto'] = pd.to_numeric(df['tiempo_muerto'], errors='coerce')
-        # fecha a tipo date
         df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce').dt.date
-         # Si falta wwid, crea la columna vacía
-        if 'wwid' not in df.columns:
-        df['wwid'] = None
-        if 'tiempo_muerto' not in df.columns:
-        df['tiempo_muerto'] = None
-
 
         frames.append(df)
 
@@ -381,19 +377,13 @@ async def upload_eficiencias(
 
     big_df = pd.concat(frames, ignore_index=True)
 
-
+    # 8) Filtrar sólo columnas que existen en el modelo
     allowed_cols = {c.name for c in models.Eficiencia.__table__.columns}
-
     registros = []
     for row in big_df.to_dict(orient='records'):
-    clean = {k: v for k, v in row.items() if k in allowed_cols}
-    registros.append(models.Eficiencia(**clean))
+        clean = {k: v for k, v in row.items() if k in allowed_cols}
+        registros.append(models.Eficiencia(**clean))
 
-    # 8) Insertar en BD
-    registros = [
-        models.Eficiencia(**row)
-        for row in big_df.to_dict(orient='records')
-    ]
     db.bulk_save_objects(registros)
     db.commit()
 
