@@ -3,6 +3,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+import pandas as pd
+import io, re
 from datetime import date
 from typing import Optional
 
@@ -316,3 +318,69 @@ def downtime_weekly_by_line(
         {"semana": int(sem), "linea": line, "avg_downtime": float(round(dt, 2))}
         for sem, line, dt in q.all()
     ]
+
+@app.post("/api/eficiencias/upload")
+async def upload_eficiencias(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    # 1) Validar extensión
+    if not file.filename.lower().endswith(('.xls', '.xlsx')):
+        raise HTTPException(400, "Sube un archivo .xls o .xlsx")
+
+    contents = await file.read()
+
+    try:
+        # 2) Leer TODAS las hojas del Excel
+        sheets = pd.read_excel(io.BytesIO(contents), sheet_name=None)
+    except Exception as e:
+        raise HTTPException(400, f"Error leyendo el Excel: {e}")
+
+    frames = []
+    for sheet_name, df in sheets.items():
+        # 3) Extraer número de semana del nombre de la sheet
+        #    Acepta '28', 'Semana 28', 'S28', etc.
+        match = re.search(r'(\d{1,2})', sheet_name)
+        if not match:
+            raise HTTPException(400, f"No pude encontrar número de semana en la hoja '{sheet_name}'")
+        semana_val = int(match.group(1))
+
+        # 4) Normalizar columnas: quita espacios, minúsculas
+        df.columns = [c.strip().lower() for c in df.columns]
+
+        # 5) Columnas requeridas (excepto 'semana', que la llenamos nosotros)
+        required = {
+            'nombre_asociado','wwid','linea','supervisor',
+            'tipo_proceso','proceso','piezas',
+            'eficiencia_asociado','turno','tiempo_muerto','fecha'
+        }
+        missing = required - set(df.columns)
+        if missing:
+            raise HTTPException(400, f"Faltan columnas en '{sheet_name}': {', '.join(missing)}")
+
+        # 6) Asignar columna semana desde el nombre de la hoja
+        df['semana'] = semana_val
+
+        # 7) Convertir tipos básicos
+        df['piezas'] = pd.to_numeric(df['piezas'], errors='coerce').fillna(0).astype(int)
+        df['eficiencia_asociado'] = pd.to_numeric(df['eficiencia_asociado'], errors='coerce').fillna(0.0)
+        df['tiempo_muerto'] = pd.to_numeric(df['tiempo_muerto'], errors='coerce')
+        # fecha a tipo date
+        df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce').dt.date
+
+        frames.append(df)
+
+    if not frames:
+        return JSONResponse({"insertados": 0})
+
+    big_df = pd.concat(frames, ignore_index=True)
+
+    # 8) Insertar en BD
+    registros = [
+        models.Eficiencia(**row)
+        for row in big_df.to_dict(orient='records')
+    ]
+    db.bulk_save_objects(registros)
+    db.commit()
+
+    return {"insertados": len(registros)}
