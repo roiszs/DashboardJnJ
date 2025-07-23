@@ -370,6 +370,9 @@ async def upload_eficiencias(
          # Si falta wwid, crea la columna vacía
         if 'wwid' not in df.columns:
         df['wwid'] = None
+        if 'tiempo_muerto' not in df.columns:
+        df['tiempo_muerto'] = None
+
 
         frames.append(df)
 
