@@ -324,51 +324,51 @@ async def upload_eficiencias(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    # 1) Validar extensión
+    # 1) Extensión
     if not file.filename.lower().endswith(('.xls', '.xlsx')):
         raise HTTPException(400, "Sube un archivo .xls o .xlsx")
 
     contents = await file.read()
 
     try:
-        # 2) Leer todas las hojas -> dict {sheet_name: DataFrame}
         sheets = pd.read_excel(io.BytesIO(contents), sheet_name=None)
     except Exception as e:
         raise HTTPException(400, f"Error leyendo el Excel: {e}")
 
     frames = []
     for sheet_name, df in sheets.items():
-        # 3) Extraer número de semana del nombre de la hoja
-        match = re.search(r'(\d{1,2})', sheet_name)
-        if not match:
-            raise HTTPException(400, f"No pude encontrar número de semana en la hoja '{sheet_name}'")
-        semana_val = int(match.group(1))
+        # --- A) Semana desde el nombre de la hoja ---
+        m = re.search(r'(\d{1,2})', sheet_name)
+        if not m:
+            raise HTTPException(400, f"No encontré número de semana en la hoja '{sheet_name}'")
+        semana_val = int(m.group(1))
 
-        # 4) Normalizar headers
+        # --- B) Normaliza headers ---
         df.columns = [c.strip().lower() for c in df.columns]
 
-        # 5) Columnas requeridas (sin 'wwid', 'semana' la ponemos nosotros)
+        # --- C) Columnas requeridas mínimas ---
         required = {
-            'nombre_asociado', 'linea', 'supervisor',
-            'tipo_proceso', 'proceso', 'piezas',
-            'eficiencia_asociado', 'turno', 'tiempo_muerto', 'fecha'
+            'nombre_asociado','linea','supervisor',
+            'tipo_proceso','proceso','piezas',
+            'eficiencia_asociado','turno'
         }
-        missing = required - set(df.columns)
-        if missing:
-            raise HTTPException(400, f"Faltan columnas en '{sheet_name}': {', '.join(missing)}")
+        faltan = required - set(df.columns)
+        if faltan:
+            raise HTTPException(400, f"Faltan columnas en '{sheet_name}': {', '.join(faltan)}")
 
-        # 6) Columnas opcionales
-        if 'wwid' not in df.columns:
-            df['wwid'] = None
-        if 'tiempo_muerto' not in df.columns:
-            df['tiempo_muerto'] = None
+        # --- D) Opcionales: crea si faltan ---
+        if 'wwid' not in df.columns:           df['wwid'] = None
+        if 'tiempo_muerto' not in df.columns:  df['tiempo_muerto'] = None
+        if 'fecha' not in df.columns:          df['fecha'] = None  # la pondremos por default
 
-        # 7) Setear semana y convertir tipos
+        # --- E) Setea semana y tipos seguros ---
         df['semana'] = semana_val
         df['piezas'] = pd.to_numeric(df['piezas'], errors='coerce').fillna(0).astype(int)
         df['eficiencia_asociado'] = pd.to_numeric(df['eficiencia_asociado'], errors='coerce').fillna(0.0)
         df['tiempo_muerto'] = pd.to_numeric(df['tiempo_muerto'], errors='coerce')
+        # fecha: si viene, parsea; si no, pon hoy
         df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce').dt.date
+        df['fecha'] = df['fecha'].fillna(date.today())
 
         frames.append(df)
 
@@ -377,14 +377,20 @@ async def upload_eficiencias(
 
     big_df = pd.concat(frames, ignore_index=True)
 
-    # 8) Filtrar sólo columnas que existen en el modelo
+    # --- F) Filtra solo columnas que tu modelo tiene ---
     allowed_cols = {c.name for c in models.Eficiencia.__table__.columns}
     registros = []
     for row in big_df.to_dict(orient='records'):
         clean = {k: v for k, v in row.items() if k in allowed_cols}
         registros.append(models.Eficiencia(**clean))
 
-    db.bulk_save_objects(registros)
-    db.commit()
+    try:
+        db.bulk_save_objects(registros)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # imprime el error completo en consola y devuelve mensaje corto al cliente
+        print("ERROR al insertar:", e)
+        raise HTTPException(500, "Error insertando en BD. Revisa la terminal para detalles.")
 
     return {"insertados": len(registros)}
