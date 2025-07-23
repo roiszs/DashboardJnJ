@@ -350,7 +350,7 @@ async def upload_eficiencias(
 
         # 5) Columnas requeridas (excepto 'semana', que la llenamos nosotros)
         required = {
-            'nombre_asociado','wwid','linea','supervisor',
+            'nombre_asociado','linea','supervisor',
             'tipo_proceso','proceso','piezas',
             'eficiencia_asociado','turno','tiempo_muerto','fecha'
         }
@@ -367,6 +367,9 @@ async def upload_eficiencias(
         df['tiempo_muerto'] = pd.to_numeric(df['tiempo_muerto'], errors='coerce')
         # fecha a tipo date
         df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce').dt.date
+         # Si falta wwid, crea la columna vacía
+        if 'wwid' not in df.columns:
+        df['wwid'] = None
 
         frames.append(df)
 
