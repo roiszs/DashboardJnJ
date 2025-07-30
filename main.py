@@ -374,7 +374,16 @@ async def upload_eficiencias(
 
     big_df = pd.concat(frames, ignore_index=True)
 
-    # --- F) Filtra solo columnas que tu modelo tiene ---
+    if not frames:
+        return {"insertados": 0}
+
+    # Intentamos concatenar; si falla, devolvemos 0 insertados
+    try:
+        big_df = pd.concat(frames, ignore_index=True)
+    except ValueError:
+        return {"insertados": 0}
+
+    # … aquí sigue el resto tal cual lo tenías …
     allowed_cols = {c.name for c in models.Eficiencia.__table__.columns}
     registros = []
     for row in big_df.to_dict(orient='records'):
@@ -386,7 +395,6 @@ async def upload_eficiencias(
         db.commit()
     except Exception as e:
         db.rollback()
-        # imprime el error completo en consola y devuelve mensaje corto al cliente
         print("ERROR al insertar:", e)
         raise HTTPException(500, "Error insertando en BD. Revisa la terminal para detalles.")
 
