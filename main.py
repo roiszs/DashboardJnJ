@@ -324,29 +324,32 @@ async def upload_eficiencias(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    # 1) Extensión
+    # 1) Validar extensión
     if not file.filename.lower().endswith(('.xls', '.xlsx')):
         raise HTTPException(400, "Sube un archivo .xls o .xlsx")
 
     contents = await file.read()
 
+    # 2) Leer todas las hojas
     try:
         sheets = pd.read_excel(io.BytesIO(contents), sheet_name=None)
     except Exception as e:
         raise HTTPException(400, f"Error leyendo el Excel: {e}")
 
-    frames = []
+    frames: list[pd.DataFrame] = []
+
+    # 3) Procesar cada hoja
     for sheet_name, df in sheets.items():
-        # --- A) Semana desde el nombre de la hoja ---
+        # 3A) Semana desde el nombre de la hoja
         m = re.search(r'(\d{1,2})', sheet_name)
         if not m:
             raise HTTPException(400, f"No encontré número de semana en la hoja '{sheet_name}'")
         semana_val = int(m.group(1))
 
-        # --- B) Normaliza headers ---
+        # 3B) Normalizar encabezados
         df.columns = [c.strip().lower() for c in df.columns]
 
-        # --- C) Columnas requeridas mínimas ---
+        # 3C) Columnas mínimas obligatorias
         required = {
             'nombre_asociado','linea','supervisor',
             'tipo_proceso','proceso','piezas',
@@ -356,44 +359,50 @@ async def upload_eficiencias(
         if faltan:
             raise HTTPException(400, f"Faltan columnas en '{sheet_name}': {', '.join(faltan)}")
 
-        # --- D) Opcionales: crea si faltan ---
-        if 'wwid' not in df.columns:           df['wwid'] = None
-        if 'tiempo_muerto' not in df.columns:  df['tiempo_muerto'] = None
-        if 'fecha' not in df.columns:          df['fecha'] = None  # la pondremos por default
+        # 3D) Columnas opcionales
+        if 'wwid' not in df.columns:
+            df['wwid'] = None
+        if 'tiempo_muerto' not in df.columns:
+            df['tiempo_muerto'] = None
+        # La fecha la parseamos más abajo
 
-        # --- E) Setea semana y tipos seguros ---
+        # 3E) Setear semana y conversiones
         df['semana'] = semana_val
         df['piezas'] = pd.to_numeric(df['piezas'], errors='coerce').fillna(0).astype(int)
-        df['eficiencia_asociado'] = pd.to_numeric(df['eficiencia_asociado'], errors='coerce').fillna(0.0)
+        df['eficiencia_asociado'] = (
+            pd.to_numeric(df['eficiencia_asociado'], errors='coerce')
+              .fillna(0.0)
+        )
         df['tiempo_muerto'] = pd.to_numeric(df['tiempo_muerto'], errors='coerce')
-       # Convertir 'fecha' si existe
+
+        # 3F) Fecha: si viene columna, usa esa; si no, déjala None
         if 'fecha' in df.columns:
             df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce').dt.date
         else:
-            df['fecha'] = None  # si no viene en el archivo
-            
-            print(f"[upload] hojas procesadas: {len(frames)}")
-            if not frames:
-                return {"insertados": 0}
+            df['fecha'] = None
 
-    big_df = pd.concat(frames, ignore_index=True)
+        # 3G) Añadir este DataFrame al listado
+        frames.append(df)
 
+    # 4) Debug & validación antes de concatenar
+    print(f"[upload] hojas procesadas: {len(frames)}")
     if not frames:
         return {"insertados": 0}
 
-    # Intentamos concatenar; si falla, devolvemos 0 insertados
+    # 5) Concatenar con seguridad
     try:
         big_df = pd.concat(frames, ignore_index=True)
     except ValueError:
         return {"insertados": 0}
 
-    # … aquí sigue el resto tal cual lo tenías …
+    # 6) Filtrar sólo columnas de tu modelo
     allowed_cols = {c.name for c in models.Eficiencia.__table__.columns}
     registros = []
     for row in big_df.to_dict(orient='records'):
         clean = {k: v for k, v in row.items() if k in allowed_cols}
         registros.append(models.Eficiencia(**clean))
 
+    # 7) Guardar en BD
     try:
         db.bulk_save_objects(registros)
         db.commit()
@@ -402,4 +411,5 @@ async def upload_eficiencias(
         print("ERROR al insertar:", e)
         raise HTTPException(500, "Error insertando en BD. Revisa la terminal para detalles.")
 
+    # 8) Devolver número de registros insertados
     return {"insertados": len(registros)}
