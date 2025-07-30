@@ -366,14 +366,11 @@ async def upload_eficiencias(
         df['piezas'] = pd.to_numeric(df['piezas'], errors='coerce').fillna(0).astype(int)
         df['eficiencia_asociado'] = pd.to_numeric(df['eficiencia_asociado'], errors='coerce').fillna(0.0)
         df['tiempo_muerto'] = pd.to_numeric(df['tiempo_muerto'], errors='coerce')
-        # fecha: si viene, parsea; si no, pon hoy
-        df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce').dt.date
-        df['fecha'] = df['fecha'].fillna(date.today())
-
-        frames.append(df)
-
-    if not frames:
-        return JSONResponse({"insertados": 0})
+       # Convertir 'fecha' si existe
+        if 'fecha' in df.columns:
+            df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce').dt.date
+        else:
+            df['fecha'] = None  # si no viene en el archivo
 
     big_df = pd.concat(frames, ignore_index=True)
 
