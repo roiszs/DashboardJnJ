@@ -371,6 +371,10 @@ async def upload_eficiencias(
             df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce').dt.date
         else:
             df['fecha'] = None  # si no viene en el archivo
+            
+            print(f"[upload] hojas procesadas: {len(frames)}")
+            if not frames:
+                return {"insertados": 0}
 
     big_df = pd.concat(frames, ignore_index=True)
 
