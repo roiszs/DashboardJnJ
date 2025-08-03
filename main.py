@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile
+from auth import fastapi_users, auth_backends, get_current_active_user, get_current_active_admin
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -10,6 +11,22 @@ from typing import Optional
 
 import models, schemas
 from database import SessionLocal, engine
+#0)Login
+app.include_router( # type: ignore
+  fastapi_users.get_auth_router(auth_backends[0]), 
+  prefix="/auth/jwt", 
+  tags=["auth"]
+)
+app.include_router( # type: ignore
+  fastapi_users.get_register_router(), 
+  prefix="/auth", 
+  tags=["auth"]
+)
+app.include_router( # type: ignore
+  fastapi_users.get_users_router(), 
+  prefix="/users", 
+  tags=["users"]
+)
 
 # 1) Crea las tablas
 models.Base.metadata.create_all(bind=engine)
