@@ -204,9 +204,16 @@ document.getElementById('uploadForm').addEventListener('submit', async e => {
   }
   const fd = new FormData();
   fd.append('file', file);
+  //Token de storage
+  const token = localStorage.getItem('token');
+
   try {
     const res = await fetch('/api/eficiencias/upload', {
       method: 'POST',
+      headers: {
+        // Único header que necesitamos
+        'Authorization': `Bearer ${token}`
+      },
       body: fd
     });
     if (!res.ok) throw await res.text();
@@ -307,7 +314,8 @@ function getAuthHeaders() {
 
   // Carga una sola vez las opciones de filtro (líneas y procesos)
   async function loadFilterOptions() {
-    const lines = await (await fetch('/api/eficiencias/lines')).json();
+    const lines = await fetch('/api/eficiencias/lines', { headers: getAuthHeaders() })
+                    .then(r => r.json());
     const lineSel = document.getElementById('filterLinea');
     lines.forEach(l => {
       const o = document.createElement('option');
@@ -315,7 +323,8 @@ function getAuthHeaders() {
       lineSel.appendChild(o);
     });
 
-    const procs = await (await fetch('/api/eficiencias/processes')).json();
+    const procs = await fetch('/api/eficiencias/processes', { headers: getAuthHeaders() })
+                    .then(r => r.json());
     const procSel = document.getElementById('filterProceso');
     procs.forEach(p => {
       const o = document.createElement('option');

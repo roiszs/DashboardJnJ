@@ -130,45 +130,60 @@
     <div id="msg" class="mt-4 text-center text-sm text-red-600"></div>
   </div>
 
-  <script>
-    (function(){
-      const form = document.getElementById('efForm');
-      const msg  = document.getElementById('msg');
-  
-      form.addEventListener('submit', async e => {
-        e.preventDefault();
-  
-        // Recolectamos los campos
-        const raw = Object.fromEntries(new FormData(form).entries());
-        // Convertimos los valores numéricos y dejamos 0 si no se ingresó tiempo muerto
-        const data = {
-          ...raw,
-          eficiencia_asociado: Number(raw.eficiencia_asociado),
-          semana:              Number(raw.semana),
-          piezas:              Number(raw.piezas || 0),
-          tiempo_muerto:       raw.tiempo_muerto
+ <script>
+  // 1) Helper para obtener el header con JWT
+  function getAuthHeaders() {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  }
+
+  // 2) IIFE para el formulario
+  (function(){
+    const form = document.getElementById('efForm');
+    const msg  = document.getElementById('msg');
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+
+      // 2A) Recolectamos y normalizamos
+      const raw = Object.fromEntries(new FormData(form).entries());
+      const data = {
+        ...raw,
+        eficiencia_asociado: Number(raw.eficiencia_asociado),
+        semana:              Number(raw.semana),
+        piezas:              Number(raw.piezas || 0),
+        tiempo_muerto:       raw.tiempo_muerto
                                 ? Number(raw.tiempo_muerto)
                                 : 0.0
-        };
-  
-        try {
-          const res = await fetch('/api/eficiencias', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-          if (!res.ok) {
-            const text = await res.text();
-            throw new Error(text);
-          }
-          msg.textContent = '✅ Registro guardado correctamente';
-          form.reset();
-        } catch(err) {
-          msg.textContent = '❌ Error: ' + err.message;
+      };
+
+      try {
+        // 2B) Petición POST con JWT en headers
+        const res = await fetch('/api/eficiencias', {
+          method:  'POST',
+          headers: getAuthHeaders(),
+          body:    JSON.stringify(data)
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text);
         }
-      });
-    })();
-  </script>
+
+        // 2C) Éxito: mostramos mensaje, reseteamos y refrescamos todo
+        msg.textContent = '✅ Registro guardado correctamente';
+        form.reset();
+        renderAll();  // <- refrésca tabla y gráficos
+      } catch(err) {
+        msg.textContent = '❌ Error: ' + err.message;
+      }
+    });
+  })();
+</script>
+
   
 </body>
 <!-- Footer -->
