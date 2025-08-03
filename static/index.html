@@ -266,6 +266,13 @@ document.getElementById('uploadForm').addEventListener('submit', async e => {
   '#7c3aed', '#0d9488', '#f43f5e', '#6366f1'
 ];
 
+function getAuthHeaders() {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+} 
   // Destruye un Chart.js existente en el canvas antes de crear uno nuevo
   function createChart(id, cfg) {
     const canvas = document.getElementById(id);
@@ -366,55 +373,88 @@ async function renderKPIs() {
 }
 
   async function renderDashboard() {
-    const data = await (await fetch('/api/eficiencias' + getFilterQS())).json();
-    const tbody = document.querySelector('#efTable tbody');
-    tbody.innerHTML = '';
-    data.forEach(r => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${r.nombre_asociado}</td>
-        <td>${r.linea}</td>
-        <td>${r.supervisor}</td>
-        <td>${r.tipo_proceso}</td>
-        <td>${r.proceso}</td>
-        <td>${r.eficiencia_asociado.toFixed(1)}%</td>
-        <td>${r.semana}</td>
-        <td>${r.turno}</td>
-        <td><button onclick="borrarRegistro(${r.id}, this)">🗑️</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
-    // promedio por línea
-    const grouped = {};
-    data.forEach(r => {
-      if (!grouped[r.linea]) grouped[r.linea] = [];
-      grouped[r.linea].push(r.eficiencia_asociado);
-    });
-    const labels = Object.keys(grouped);
-    const avg    = labels.map(l => grouped[l].reduce((a,b)=>a+b,0)/grouped[l].length);
-
-    createChart('eficienciaChart', {
-      type: 'bar',
-      data: { labels, datasets:[{ label:'Eficiencia Prom. Línea (%)', data: avg }] },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
-    });
+  // 1) Lanza la petición con Authorization
+  const res = await fetch(
+    '/api/eficiencias' + getFilterQS(),
+    { headers: getAuthHeaders() }
+  );
+  if (!res.ok) {
+    console.error('Error al cargar eficiencias:', await res.text());
+    return;
   }
+  const data = await res.json();
 
-  let weeklyChartInstance;
+  // 2) Pinta la tabla
+  const tbody = document.querySelector('#efTable tbody');
+  tbody.innerHTML = '';
+  data.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.nombre_asociado}</td>
+      <td>${r.linea}</td>
+      <td>${r.supervisor}</td>
+      <td>${r.tipo_proceso}</td>
+      <td>${r.proceso}</td>
+      <td>${r.eficiencia_asociado.toFixed(1)}%</td>
+      <td>${r.semana}</td>
+      <td>${r.turno}</td>
+      <td><button onclick="borrarRegistro(${r.id}, this)">🗑️</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // 3) Cálculo de promedio por línea
+  const grouped = {};
+  data.forEach(r => {
+    if (!grouped[r.linea]) grouped[r.linea] = [];
+    grouped[r.linea].push(r.eficiencia_asociado);
+  });
+  const labels = Object.keys(grouped);
+  const avg    = labels.map(
+    l => grouped[l].reduce((a,b)=>a+b,0) / grouped[l].length
+  );
+
+  // 4) Dibujar el chart usando tu helper createChart
+  createChart('eficienciaChart', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Eficiencia Prom. Línea (%)',
+        data: avg
+      }]
+    },
+    options: {
+      scales: { y: { beginAtZero: true, max: 100 } }
+    }
+  });
+}
+
 
 async function renderWeekly() {
-  const qs = getFilterQS();
-  const raw = await fetch('/api/eficiencias/weekly' + qs).then(r => r.json());
+  const qs  = getFilterQS();
+  const url = '/api/eficiencias/weekly' + qs;
 
+  // 1) Fetch con Authorization
+  const res = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    console.error('Error al cargar eficiencia semanal:', await res.text());
+    return;
+  }
+  const raw = await res.json();
+
+  // 2) Si no hay datos, pinta mensaje
   if (!raw.length) {
-    if (weeklyChartInstance) { weeklyChartInstance.destroy(); }
+    if (weeklyChartInstance) weeklyChartInstance.destroy();
     const ctx = document.getElementById('weeklyChart').getContext('2d');
     ctx.font = '14px sans-serif';
     ctx.fillText('Sin datos para el filtro actual', 20, 30);
     return;
   }
 
-  // --- Agrupar por proceso y calcular promedios globales para ranking ---
+  // 3) Resto de tu lógica sin cambios …
   const procStats = {};
   raw.forEach(r => {
     (procStats[r.proceso] ||= []).push(r.promedio_asociado);
@@ -424,14 +464,11 @@ async function renderWeekly() {
     .sort((a,b) => b[1] - a[1]);
 
   const TOP_N = 8;
-  const topProcesos = ranked.slice(0, TOP_N).map(([p]) => p);
+  const topProcesos   = ranked.slice(0, TOP_N).map(([p]) => p);
   const otherProcesos = ranked.slice(TOP_N).map(([p]) => p);
-  const useOthers = otherProcesos.length > 0;
-
-  // Semanas ordenadas
+  const useOthers     = otherProcesos.length > 0;
   const semanas = [...new Set(raw.map(r => r.semana))].sort((a,b)=>a-b);
 
-  // Construimos dataset para cada proceso top
   const datasets = topProcesos.map((proc, idx) => ({
     label: proc,
     data: semanas.map(sem => {
@@ -442,12 +479,10 @@ async function renderWeekly() {
     borderRadius: 4
   }));
 
-  // Dataset “Otros” (promedio agregado)
   if (useOthers) {
     datasets.push({
       label: 'Otros',
       data: semanas.map(sem => {
-        // promedios de procesos que no son top
         const subset = raw.filter(r => r.semana === sem && otherProcesos.includes(r.proceso));
         if (!subset.length) return 0;
         const avg = subset.reduce((s,r)=>s+r.promedio_asociado,0)/subset.length;
@@ -458,17 +493,13 @@ async function renderWeekly() {
     });
   }
 
-  // Destruir instancia previa
   if (weeklyChartInstance) weeklyChartInstance.destroy();
 
   weeklyChartInstance = new Chart(
     document.getElementById('weeklyChart'),
     {
       type: 'bar',
-      data: {
-        labels: semanas,
-        datasets
-      },
+      data: { labels: semanas, datasets },
       options: {
         responsive: true,
         interaction: { mode: 'index', intersect: false },
@@ -482,15 +513,8 @@ async function renderWeekly() {
           }
         },
         scales: {
-          x: {
-            title: { display: true, text: 'Semana' },
-            stacked: false   // cambia a true si quieres apilado
-          },
-            y: {
-            beginAtZero: true,
-            max: 100,
-            title: { display: true, text: 'Eficiencia (%)' }
-          }
+          x: { title: { display: true, text: 'Semana' }, stacked: false },
+          y: { beginAtZero: true, max: 100, title: { display: true, text: 'Eficiencia (%)' } }
         }
       }
     }
@@ -498,12 +522,24 @@ async function renderWeekly() {
 }
 
 
+
 let dailyProcessChartInstance;
 
 async function renderDailyProcess() {
-  const qs = getFilterQS();
-  const raw = await fetch('/api/eficiencias/daily/process' + qs).then(r => r.json());
+  const qs  = getFilterQS();
+  const url = '/api/eficiencias/daily/process' + qs;
 
+  // 1) Petición con autenticación
+  const res = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    console.error('Error al cargar eficiencia diaria por proceso:', await res.text());
+    return;
+  }
+  const raw = await res.json();
+
+  // 2) Si no hay datos, mostramos mensaje
   if (!raw.length) {
     if (dailyProcessChartInstance) dailyProcessChartInstance.destroy();
     const ctx = document.getElementById('dailyProcessChart').getContext('2d');
@@ -512,20 +548,23 @@ async function renderDailyProcess() {
     return;
   }
 
-  // Rank procesos por promedio en el rango
+  // 3) Ranking de procesos
   const procStats = {};
   raw.forEach(r => {
     (procStats[r.proceso] ||= []).push(r.promedio_asociado);
   });
   const ranked = Object.entries(procStats)
     .map(([p, arr]) => [p, arr.reduce((a,b)=>a+b,0)/arr.length])
-    .sort((a,b)=> b[1]-a[1]);
+    .sort((a,b) => b[1] - a[1]);
 
   const TOP_N = 8;
   const topProcesos = ranked.slice(0, TOP_N).map(([p]) => p);
-  const others = ranked.slice(TOP_N).map(([p]) => p);
+  const others      = ranked.slice(TOP_N).map(([p]) => p);
+
+  // 4) Fechas ordenadas
   const fechas = [...new Set(raw.map(r => r.fecha))].sort();
 
+  // 5) Construcción de datasets
   const datasets = topProcesos.map((proc, idx) => ({
     label: proc,
     data: fechas.map(f => {
@@ -550,6 +589,7 @@ async function renderDailyProcess() {
     });
   }
 
+  // 6) Destruir instancia previa y dibujar nueva
   if (dailyProcessChartInstance) dailyProcessChartInstance.destroy();
 
   dailyProcessChartInstance = new Chart(
@@ -570,10 +610,70 @@ async function renderDailyProcess() {
           }
         },
         scales: {
-          x: {
-            title: { display: true, text: 'Fecha' },
-            stacked: false
-          },
+          x: { title: { display: true, text: 'Fecha' }, stacked: false },
+          y: { beginAtZero: true, max: 100, title: { display: true, text: 'Eficiencia (%)' } }
+        }
+      }
+    }
+  );
+}
+
+let dailyLineChartInstance;
+
+async function renderDailyLine() {
+  const qs  = getFilterQS();
+  const url = '/api/eficiencias/daily/line' + qs;
+
+  // 1) Lanza la petición con Authorization
+  const res = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    console.error('Error al cargar eficiencia diaria por línea:', await res.text());
+    return;
+  }
+  const raw = await res.json();
+
+  // 2) Destruye instancia anterior si existe
+  if (dailyLineChartInstance) dailyLineChartInstance.destroy();
+
+  // 3) Si no hay datos, muestra mensaje y corta
+  if (!raw.length) {
+    const ctx = document.getElementById('dailyLineChart').getContext('2d');
+    ctx.font = '14px sans-serif';
+    ctx.fillText('Sin datos para el filtro actual', 20, 30);
+    return;
+  }
+
+  // 4) Prepara labels y datasets
+  const fechas  = [...new Set(raw.map(r => r.fecha))].sort();
+  const lineas  = [...new Set(raw.map(r => r.linea))];
+
+  const datasets = lineas.map((linea, idx) => ({
+    label: linea,
+    data: fechas.map(f => {
+      const rec = raw.find(r => r.fecha === f && r.linea === linea);
+      return rec ? Number(rec.promedio_asociado.toFixed(1)) : 0;
+    }),
+    borderColor:    PALETTE[idx % PALETTE.length],
+    backgroundColor: PALETTE[idx % PALETTE.length],
+    fill: false,
+    tension: 0.3,
+    pointRadius: 4
+  }));
+
+  // 5) Crea el gráfico (tipo barra o línea según prefieras)
+  dailyLineChartInstance = new Chart(
+    document.getElementById('dailyLineChart'),
+    {
+      type: 'bar',  // cámbialo a 'line' si prefieres líneas
+      data: { labels: fechas, datasets },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'top' } },
+        scales: {
+          x: { title: { display: true, text: 'Fecha' } },
           y: {
             beginAtZero: true,
             max: 100,
@@ -585,52 +685,6 @@ async function renderDailyProcess() {
   );
 }
 
-
-let dailyLineChartInstance;
-
-async function renderDailyLine() {
-  const qs = getFilterQS();
-  const raw = await fetch('/api/eficiencias/daily/line' + qs).then(r => r.json());
-  if (dailyLineChartInstance) dailyLineChartInstance.destroy();
-
-  if (!raw.length) {
-    const ctx = document.getElementById('dailyLineChart').getContext('2d');
-    ctx.font = '14px sans-serif';
-    ctx.fillText('Sin datos', 20, 30);
-    return;
-  }
-
-  const fechas = [...new Set(raw.map(r => r.fecha))].sort();
-  const lineas = [...new Set(raw.map(r => r.linea))];
-
-  const datasets = lineas.map((linea, idx) => ({
-    label: linea,
-    data: fechas.map(f => {
-      const rec = raw.find(r => r.fecha === f && r.linea === linea);
-      return rec ? Number(rec.promedio_asociado.toFixed(1)) : 0;
-    }),
-    borderColor: PALETTE[idx % PALETTE.length],
-    backgroundColor: PALETTE[idx % PALETTE.length],
-    fill: false,
-    tension: 0.3,
-    pointRadius: 4
-  }));
-
-  dailyLineChartInstance = new Chart(
-    document.getElementById('dailyLineChart'),
-    {
-      type: 'bar', // si prefieres barras en vez de línea
-      data: { labels: fechas, datasets },
-      options: {
-        scales: {
-          y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } },
-          x: { title: { display: true, text: 'Fecha' } }
-        },
-        plugins: { legend: { position: 'top' } }
-      }
-    }
-  );
-}
 
 
   //async function renderWorstAssociates() {
@@ -648,21 +702,28 @@ async function renderDailyLine() {
 
 async function renderTopAssociates() {
   // 1) Construye la QS de filtros
-  const qs = getFilterQS();                // ej. "?start=2025-07-14&end=2025-07-18&linea=L28"
-  const sep = qs ? '&' : '?';              // si qs existe, usamos '&', si no '?'
+  const qs  = getFilterQS();                // ej. "?start=2025-07-14&end=2025-07-18&linea=L28"
+  const sep = qs ? '&' : '?';               // si qs existe, usamos '&', si no '?'
   const url = `/api/eficiencias/top-associates${qs}${sep}limit=5`;
 
-  // 2) Lanza la petición
-  const data = await (await fetch(url)).json();
+  // 2) Lanza la petición con autenticación
+  const res = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    console.error('Error al cargar top de asociados:', await res.text());
+    return;
+  }
+  const data = await res.json();
 
-  // 3) Destroza chart anterior si existe
+  // 3) Destruye el chart anterior si existe
   if (topAssocChartInstance) topAssocChartInstance.destroy();
 
   // 4) Prepara labels y valores
-  const labels = data.map(r => r.nombre);
+  const labels  = data.map(r => r.nombre);
   const valores = data.map(r => r.promedio_asociado);
 
-  // 5) Dibuja en barras usando PALETTE global
+  // 5) Dibuja en barras usando tu PALETTE global
   topAssocChartInstance = new Chart(
     document.getElementById('topAssocChart'),
     {
@@ -672,30 +733,53 @@ async function renderTopAssociates() {
         datasets: [{
           label: 'Eficiencia Asociado (%)',
           data: valores,
-          backgroundColor: labels.map((_,i) => PALETTE[i % PALETTE.length])
+          backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length])
         }]
       },
       options: {
         scales: {
-          y: { beginAtZero: true, max: 100 },
+          y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } },
           x: { ticks: { autoSkip: false } }
         },
-        plugins: { legend: { display: false } }
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: item => `${item.dataset.label}: ${item.formattedValue}%`
+            }
+          }
+        }
       }
     }
   );
 }
 
 
+
 let shiftChartInstance;
 
 async function renderShift() {
-  const data = await fetch('/api/eficiencias/shift' + getFilterQS()).then(r => r.json());
+  const qs  = getFilterQS();
+  const url = '/api/eficiencias/shift' + qs;
+
+  // 1) Petición autenticada
+  const res = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    console.error('Error al cargar eficiencia por turno:', await res.text());
+    return;
+  }
+  const data = await res.json();
+
+  // 2) Destruye la instancia previa si existe
   if (shiftChartInstance) shiftChartInstance.destroy();
 
-  const labels = data.map(r => r.turno);
+  // 3) Prepara etiquetas y valores
+  const labels  = data.map(r => r.turno);
   const valores = data.map(r => r.promedio_asociado);
 
+  // 4) Dibuja el chart
   shiftChartInstance = new Chart(
     document.getElementById('shiftChart'),
     {
@@ -705,11 +789,15 @@ async function renderShift() {
         datasets: [{
           label: 'Eficiencia (%)',
           data: valores,
-          backgroundColor: labels.map((_,i) => PALETTE[i % PALETTE.length])
+          backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length])
         }]
       },
       options: {
-        scales: { y: { beginAtZero: true, max: 100 } },
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } },
+          x: { title: { display: true, text: 'Turno' } }
+        },
         plugins: { legend: { display: false } }
       }
     }
@@ -719,17 +807,32 @@ async function renderShift() {
 let countChartInstance;
 
 async function renderCounts() {
-  const data = await fetch('/api/eficiencias/counts' + getFilterQS()).then(r => r.json());
+  const qs  = getFilterQS();
+  const url = '/api/eficiencias/counts' + qs;
+
+  // 1) Petición autenticada
+  const res = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    console.error('Error al cargar conteos SW/WD:', await res.text());
+    return;
+  }
+  const data = await res.json();
+
+  // 2) Destruye la instancia previa si existe
   if (countChartInstance) countChartInstance.destroy();
 
-  const lineas = [...new Set(data.map(r => r.linea))];
+  // 3) Prepara labels y valores
+  const lineas   = [...new Set(data.map(r => r.linea))];
   const swCounts = lineas.map(l =>
-    data.find(r => r.linea === l && r.tipo_proceso==='SW')?.total_piezas || 0
+    data.find(r => r.linea === l && r.tipo_proceso === 'SW')?.total_piezas || 0
   );
   const wdCounts = lineas.map(l =>
-    data.find(r => r.linea === l && r.tipo_proceso==='WD')?.total_piezas || 0
+    data.find(r => r.linea === l && r.tipo_proceso === 'WD')?.total_piezas || 0
   );
 
+  // 4) Dibuja el chart
   countChartInstance = new Chart(
     document.getElementById('countChart'),
     {
@@ -751,7 +854,13 @@ async function renderCounts() {
       },
       options: {
         responsive: true,
-        scales: { y: { beginAtZero: true } }
+        scales: {
+          x: { title: { display: true, text: 'Línea' } },
+          y: { beginAtZero: true, title: { display: true, text: 'Piezas' } }
+        },
+        plugins: {
+          legend: { position: 'top' }
+        }
       }
     }
   );
@@ -761,41 +870,63 @@ async function renderCounts() {
 let downtimeChartInstance;
 
 async function renderDowntime() {
-  const raw = await fetch('/api/eficiencias/weekly/downtime' + getFilterQS()).then(r=>r.json());
+  const qs  = getFilterQS();
+  const url = '/api/eficiencias/weekly/downtime' + qs;
+
+  // 1) Petición autenticada
+  const res = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    console.error('Error al cargar tiempo muerto semanal:', await res.text());
+    return;
+  }
+  const raw = await res.json();
+
+  // 2) Destruye la instancia previa si existe
   if (downtimeChartInstance) downtimeChartInstance.destroy();
 
+  // 3) Si no hay datos, cortamos
   if (!raw.length) return;
 
+  // 4) Prepara etiquetas y datasets
   const semanas = [...new Set(raw.map(r => r.semana))].sort((a,b)=>a-b);
   const lineas  = [...new Set(raw.map(r => r.linea))];
 
   const datasets = lineas.map((linea, idx) => ({
     label: linea,
     data: semanas.map(sem => {
-      const rec = raw.find(r => r.semana===sem && r.linea===linea);
+      const rec = raw.find(r => r.semana === sem && r.linea === linea);
       return rec ? Number(rec.avg_downtime.toFixed(1)) : 0;
     }),
     backgroundColor: PALETTE[idx % PALETTE.length],
-    borderColor: PALETTE[idx % PALETTE.length],
-    tension: 0.3,
-    fill: false
+    borderColor:     PALETTE[idx % PALETTE.length],
+    fill: false,
+    tension: 0.3
   }));
 
+  // 5) Dibuja el gráfico
   downtimeChartInstance = new Chart(
     document.getElementById('downtimeChart'),
     {
-      type: 'bar', // o 'line' si prefieres línea
-      data: { labels: semanas, datasets },
+      type: 'bar',  // cámbialo a 'line' si prefieres líneas
+      data: {
+        labels: semanas,
+        datasets
+      },
       options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'top' } },
         scales: {
-          y: { beginAtZero: true, title: { display: true, text: 'Minutos' } },
-          x: { title: { display: true, text: 'Semana' } }
-        },
-        plugins: { legend: { position: 'top' } }
+          x: { title: { display: true, text: 'Semana' } },
+          y: { beginAtZero: true, title: { display: true, text: 'Minutos perdidos' } }
+        }
       }
     }
   );
 }
+
 
   // Llamada única a todos
   async function renderAll() {
