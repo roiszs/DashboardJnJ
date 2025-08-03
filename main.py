@@ -40,6 +40,108 @@ def get_db():
     finally:
         db.close()
 
+        # 2) Monta los routers de FastAPI-Users para registro/login/usuarios
+app.include_router(
+    fastapi_users.get_auth_router(auth_backends[0]),
+    prefix="/auth/jwt",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_register_router(),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_users_router(),
+    prefix="/users",
+    tags=["users"],
+)
+
+# 3) Dependencia para obtener DB
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# 4) Monta los estáticos y las páginas públicas
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/", response_class=FileResponse)
+def serve_dashboard():
+    return "static/index.html"
+
+@app.get("/add.html", response_class=FileResponse)
+def serve_form():
+    return "static/add.html"
+
+# 5) Endpoints protegidos
+
+# — lectores (admin o viewer) —
+@app.get(
+    "/api/eficiencias",
+    response_model=list[schemas.Eficiencia],
+    dependencies=[Depends(get_current_active_user)]
+)
+def leer_eficiencias(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return db.query(models.Eficiencia).offset(skip).limit(limit).all()
+
+@app.get(
+    "/api/eficiencias/export",
+    dependencies=[Depends(get_current_active_user)]
+)
+def export_eficiencias(
+    # mismos filtros que tu endpoint original…
+    start:  Optional[date] = None,
+    end:    Optional[date] = None,
+    linea:  Optional[str]  = None,
+    proceso:Optional[str]  = None,
+    db:     Session        = Depends(get_db),
+):
+    # lógica de export…
+    ...
+
+# — solo admin —  
+@app.post(
+    "/api/eficiencias/upload",
+    dependencies=[Depends(get_current_active_admin)]
+)
+async def upload_eficiencias(
+    file: UploadFile = File(...),
+    db:   Session    = Depends(get_db),
+):
+    # lógica de subida masiva…
+    ...
+
+@app.post(
+    "/api/eficiencias",
+    response_model=schemas.Eficiencia,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_active_admin)]
+)
+def crear_eficiencia(
+    payload: schemas.EficienciaCreate,
+    db:      Session = Depends(get_db)
+):
+    registro = models.Eficiencia(**payload.dict())
+    db.add(registro)
+    db.commit()
+    db.refresh(registro)
+    return registro
+
+@app.delete(
+    "/api/eficiencias/{ef_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(get_current_active_admin)]
+)
+def borrar_eficiencia(ef_id: int, db: Session = Depends(get_db)):
+    reg = db.query(models.Eficiencia).filter(models.Eficiencia.id == ef_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    db.delete(reg)
+    db.commit()
+
 # 2) Endpoints de lectura con filtros
 @app.get("/api/eficiencias", response_model=list[schemas.Eficiencia])
 def leer_eficiencias(
