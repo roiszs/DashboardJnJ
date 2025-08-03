@@ -8,24 +8,51 @@ import pandas as pd
 import io, re
 from datetime import date
 from typing import Optional
+from fastapi import Depends
+from auth import get_current_active_user, get_current_active_admin
 
 import models, schemas
 from database import SessionLocal, engine
 #0)Login
+
+# 1) Sirve el login (público)
+@app.get("/login.html", response_class=FileResponse) # type: ignore
+def serve_login():
+    return "static/login.html"
+
+# 2) Protege el dashboard: sólo usuarios con token válido lo verán
+@app.get( # type: ignore
+    "/",
+    response_class=FileResponse,
+    dependencies=[Depends(get_current_active_user)]
+)
+def serve_dashboard():
+    return "static/index.html"
+
+# 3) Protege el formulario de creación (mismo nivel que dashboard)
+@app.get( # type: ignore
+    "/add.html",
+    response_class=FileResponse,
+    dependencies=[Depends(get_current_active_user)]
+)
+def serve_form():
+    return "static/add.html"
+
+# 4) Routers de auth / users
 app.include_router( # type: ignore
-  fastapi_users.get_auth_router(auth_backends[0]), 
-  prefix="/auth/jwt", 
-  tags=["auth"]
+    fastapi_users.get_auth_router(auth_backends[0]),
+    prefix="/auth/jwt",
+    tags=["auth"],
 )
 app.include_router( # type: ignore
-  fastapi_users.get_register_router(), 
-  prefix="/auth", 
-  tags=["auth"]
+    fastapi_users.get_register_router(),
+    prefix="/auth",
+    tags=["auth"],
 )
 app.include_router( # type: ignore
-  fastapi_users.get_users_router(), 
-  prefix="/users", 
-  tags=["users"]
+    fastapi_users.get_users_router(),
+    prefix="/users",
+    tags=["users"],
 )
 
 # 1) Crea las tablas
