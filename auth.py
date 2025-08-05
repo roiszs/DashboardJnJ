@@ -5,7 +5,6 @@ from fastapi import Depends, HTTPException, status
 from fastapi_users import FastAPIUsers
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users import schemas as fu_schemas
-from fastapi_users.password import get_password_hash, PasswordHelper
 from fastapi_users.authentication import (
     AuthenticationBackend,
     BearerTransport,
@@ -26,7 +25,7 @@ class UserTable(Base):
     is_active       = Column(Boolean, default=True, nullable=False)
     role            = Column(String, default="viewer", nullable=False)
 
-# 1) Los Pydantic schemas de FastAPI-Users, importados desde fastapi_users.schemas
+# 1) Pydantic schemas de FastAPI-Users
 class User(fu_schemas.BaseUser[int]):
     role: str
 
@@ -39,10 +38,10 @@ class UserUpdate(fu_schemas.BaseUserUpdate):
 class UserDB(User, fu_schemas.BaseUserDB[int]):
     pass
 
-# 2) Crea la tabla "users" en la BD (solo la primera vez)
+# 2) Crea la tabla "users" en la BD
 Base.metadata.create_all(bind=engine)
 
-# 3) Configura el backend de usuarios de FastAPI-Users
+# 3) Configura la DB de usuarios
 async def get_user_db() -> AsyncGenerator[SQLAlchemyUserDatabase, None]:
     db = SessionLocal()
     try:
