@@ -1,13 +1,28 @@
 # auth.py
 
 from fastapi import Depends, HTTPException, status
-from fastapi_users import FastAPIUsers, schemas
+from fastapi_users import FastAPIUsers
 from fastapi_users.db import SQLAlchemyUserDatabase
-from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
+# Importa TODO desde fastapi_users.models:
+from fastapi_users.models import (
+    BaseUser,
+    BaseUserCreate,
+    BaseUserUpdate,
+    BaseUserDB,
+)
+from fastapi_users.password import get_password_hash, PasswordHelper
+from fastapi_users.authentication import (
+    AuthenticationBackend,
+    BearerTransport,
+    JWTStrategy,
+)
 from database import Base, engine, SessionLocal
 from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 
-# 0) Tu modelo SQLAlchemy (usa el Base que viene de database.py)
+# 0) modelo SQLAlchemy de la tabla users
+Base: DeclarativeMeta = declarative_base()
+
 class UserTable(Base):
     __tablename__ = "users"
     id              = Column(Integer, primary_key=True, index=True)
@@ -16,23 +31,24 @@ class UserTable(Base):
     is_active       = Column(Boolean, default=True, nullable=False)
     role            = Column(String, default="viewer", nullable=False)
 
-# 1) Los schemas de FastAPI-Users
-class User(schemas.BaseUser):
+# 1) Pydantic schemas para FastAPI-Users
+class User(BaseUser):
     role: str
 
-class UserCreate(schemas.BaseUserCreate):
+class UserCreate(BaseUserCreate):
     pass
 
-class UserUpdate(schemas.BaseUserUpdate):
+class UserUpdate(BaseUserUpdate):
     role: str | None = None
 
-class UserDB(User, schemas.BaseUserDB):
+# Aquí usa **directamente** BaseUserDB, no schemas.BaseUserDB
+class UserDB(User, BaseUserDB):
     pass
 
-# 2) Crea la tabla de usuarios
+# 2) crea la tabla users
 Base.metadata.create_all(bind=engine)
 
-# 3) Configura la DB de usuarios
+# 3) configura la DB de usuarios
 def get_user_db():
     db = SessionLocal()
     try:
@@ -40,21 +56,18 @@ def get_user_db():
     finally:
         db.close()
 
-# 4) Transporte Bearer para el token
+# 4) transporte y estrategia JWT
 bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
-
-# 5) Estrategia JWT
-SECRET = "TU_SECRETO_MUY_SECUR0_Y_LARGO"
+SECRET = "TU_SECRETO_MUY_SEGUR0_Y_LARGO"
 jwt_strategy = JWTStrategy(secret=SECRET, lifetime_seconds=3600)
 
-# 6) Backend de autenticación
 auth_backend = AuthenticationBackend(
     name="jwt",
     transport=bearer_transport,
     get_strategy=lambda: jwt_strategy,
 )
 
-# 7) Instancia FastAPI-Users
+# 5) instancia FastAPI-Users
 fastapi_users = FastAPIUsers[User, UserCreate, UserUpdate, UserDB](
     get_user_db,
     [auth_backend],
@@ -64,9 +77,8 @@ fastapi_users = FastAPIUsers[User, UserCreate, UserUpdate, UserDB](
     UserDB,
 )
 
-# 8) Dependencias para proteger rutas
+# 6) dependencias para proteger rutas
 get_current_active_user = fastapi_users.current_user(active=True)
-
 def get_current_active_admin(
     user: UserDB = Depends(get_current_active_user),
 ):
