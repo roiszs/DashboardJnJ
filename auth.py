@@ -12,7 +12,7 @@ from fastapi_users.authentication import (
 )
 from database import Base, engine, SessionLocal
 from sqlalchemy import Column, Integer, String, Boolean
-from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
+from database import Base, engine, SessionLocal
 
 # 0) Tu modelo SQLAlchemy de la tabla "users"
 Base: DeclarativeMeta = declarative_base()
