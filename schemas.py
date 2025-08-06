@@ -1,4 +1,5 @@
 # schemas.py
+
 from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Optional
 import re
@@ -44,4 +45,3 @@ class EficienciaCreate(BaseModel):
         if not re.fullmatch(r"[A-Za-zÀ-ÖØ-öø-ÿ0-9 ]+", v):
             raise ValueError("Solo se permiten letras, números y espacios")
         return v
-
