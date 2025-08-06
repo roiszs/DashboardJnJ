@@ -1,7 +1,6 @@
 # schemas.py
 
 from pydantic import BaseModel, ConfigDict, field_validator
-from typing import Optional
 import re
 
 class Eficiencia(BaseModel):
@@ -26,7 +25,7 @@ class EficienciaCreate(BaseModel):
     tipo_proceso: str
     proceso: str
     eficiencia_asociado: float
-    semana: int           # ← en lugar de fecha
+    semana: int           # en lugar de fecha
     turno: str
     piezas: int 
     tiempo_muerto: float = 0.0
@@ -41,7 +40,7 @@ class EficienciaCreate(BaseModel):
 
     @field_validator("linea", "proceso", "turno")
     def alfanumerico(cls, v):
-        # si quieres permitir acentos, expande el rango
+        # Permite acentos y espacios
         if not re.fullmatch(r"[A-Za-zÀ-ÖØ-öø-ÿ0-9 ]+", v):
             raise ValueError("Solo se permiten letras, números y espacios")
         return v
