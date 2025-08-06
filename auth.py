@@ -1,22 +1,22 @@
 # auth.py
 
 from typing import Optional, AsyncGenerator
+
 from fastapi import Depends, HTTPException, status
 from fastapi_users import FastAPIUsers
 from fastapi_users.db import SQLAlchemyUserDatabase
-from fastapi_users import schemas as fu_schemas
+from fastapi_users.models import BaseUser, BaseUserCreate, BaseUserUpdate, BaseUserDB
+from fastapi_users.password import PasswordHelper
 from fastapi_users.authentication import (
     AuthenticationBackend,
     BearerTransport,
     JWTStrategy,
 )
-from database import Base, engine, SessionLocal
 from sqlalchemy import Column, Integer, String, Boolean
+
 from database import Base, engine, SessionLocal
 
-# 0) Tu modelo SQLAlchemy de la tabla "users"
-Base: DeclarativeMeta = declarative_base()
-
+# — 0) Modelo SQLAlchemy para la tabla “users” —
 class UserTable(Base):
     __tablename__ = "users"
     id              = Column(Integer, primary_key=True, index=True)
@@ -25,23 +25,24 @@ class UserTable(Base):
     is_active       = Column(Boolean, default=True, nullable=False)
     role            = Column(String, default="viewer", nullable=False)
 
-# 1) Pydantic schemas de FastAPI-Users
-class User(fu_schemas.BaseUser[int]):
-    role: str
-
-class UserCreate(fu_schemas.BaseUserCreate):
-    pass
-
-class UserUpdate(fu_schemas.BaseUserUpdate):
-    role: Optional[str] = None
-
-class UserDB(User, fu_schemas.BaseUserDB[int]):
-    pass
-
-# 2) Crea la tabla "users" en la BD
+# Crea la tabla si no existía
 Base.metadata.create_all(bind=engine)
 
-# 3) Configura la DB de usuarios
+# — 1) Pydantic schemas de FastAPI-Users —
+class User(BaseUser[int]):
+    role: str
+
+class UserCreate(BaseUserCreate[int]):
+    role: Optional[str] = None
+
+class UserUpdate(BaseUserUpdate[int]):
+    role: Optional[str] = None
+
+class UserDB(User, BaseUserDB[int]):
+    """Este model combina User + BaseUserDB"""
+    pass
+
+# — 2) UsuarioDB dependency —
 async def get_user_db() -> AsyncGenerator[SQLAlchemyUserDatabase, None]:
     db = SessionLocal()
     try:
@@ -49,7 +50,7 @@ async def get_user_db() -> AsyncGenerator[SQLAlchemyUserDatabase, None]:
     finally:
         db.close()
 
-# 4) Transport y estrategia JWT
+# — 3) Configura JWT auth backend —
 bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
 SECRET = "TU_SECRETO_MUY_SEGUR0_Y_LARGO"
 jwt_strategy = JWTStrategy(secret=SECRET, lifetime_seconds=3600)
@@ -60,8 +61,10 @@ auth_backend = AuthenticationBackend(
     get_strategy=lambda: jwt_strategy,
 )
 
-# 5) Instancia FastAPI-Users
-fastapi_users = FastAPIUsers[User, UserCreate, UserUpdate, UserDB](
+# — 4) Instancia FastAPIUsers —
+fastapi_users = FastAPIUsers[
+    User, UserCreate, UserUpdate, UserDB
+](
     get_user_db,
     [auth_backend],
     User,
@@ -70,16 +73,15 @@ fastapi_users = FastAPIUsers[User, UserCreate, UserUpdate, UserDB](
     UserDB,
 )
 
-# 6) Dependencias para proteger rutas
+# — 5) Dependencias para proteger rutas —
 get_current_active_user = fastapi_users.current_user(active=True)
 
-def get_current_active_admin(
+async def get_current_active_admin(
     user: UserDB = Depends(get_current_active_user),
 ):
     if user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo los admins pueden acceder",
+            detail="Solo los administradores pueden hacer eso",
         )
     return user
-
