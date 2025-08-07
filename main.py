@@ -1,19 +1,22 @@
 # main.py
 
-from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile
+from fastapi import (
+    FastAPI, APIRouter, Depends,
+    HTTPException, status, File, UploadFile
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import pandas as pd
 import io, re
+
 from datetime import date
 from typing import Optional
 
 import models, schemas
 from database import engine, SessionLocal
 
-# Importa tu sistema de usuarios
 from auth import (
     fastapi_users,
     auth_backend,
@@ -21,16 +24,18 @@ from auth import (
     get_current_active_admin,
 )
 
-# 1) Crea todas las tablas (usuarios + eficiencias)
-models.Base.metadata.create_all(bind=engine)
+# 1) Instancia de FastAPI
+app = FastAPI(title="Dashboard J&J")
 
-# 2) Instancia de FastAPI
-app = FastAPI()
+# 2) Evento de arranque: crea todas las tablas (usuarios + eficiencias)
+@app.on_event("startup")
+def on_startup():
+    models.Base.metadata.create_all(bind=engine)
 
-# 3) Monta los ficheros estáticos (CSS, JS, imágenes)
+# 3) Monta los estáticos (CSS, JS, imágenes)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# 4) Routers de autenticación de FastAPI-Users
+# 4) Routers de autenticación (FastAPI-Users)
 app.include_router(
     fastapi_users.get_auth_router(auth_backend),
     prefix="/auth/jwt",
@@ -48,26 +53,22 @@ app.include_router(
 )
 
 # 5) Páginas HTML
-
-# 5.1) Login (público)
 @app.get("/login.html", response_class=FileResponse)
 def serve_login():
     return "static/login.html"
 
-# 5.2) Dashboard (requiere usuario activo)
 @app.get(
     "/",
     response_class=FileResponse,
-    dependencies=[Depends(get_current_active_user)]
+    dependencies=[Depends(get_current_active_user)],
 )
 def serve_dashboard():
     return "static/index.html"
 
-# 5.3) Formulario de alta (requiere usuario activo)
 @app.get(
     "/add.html",
     response_class=FileResponse,
-    dependencies=[Depends(get_current_active_user)]
+    dependencies=[Depends(get_current_active_user)],
 )
 def serve_form():
     return "static/add.html"
@@ -80,18 +81,19 @@ def get_db():
     finally:
         db.close()
 
-# 7) CRUD de Eficiencias
+# 7) APIRouter para todas las rutas /api/eficiencias
+router = APIRouter(prefix="/api/eficiencias", tags=["eficiencias"])
 
-# 7.1) Crear registro (solo admin)
-@app.post(
-    "/api/eficiencias",
+# 7.1) Crear nuevo registro (solo admin)
+@router.post(
+    "",
     response_model=schemas.Eficiencia,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(get_current_active_admin)]
+    dependencies=[Depends(get_current_active_admin)],
 )
 def crear_eficiencia(
     payload: schemas.EficienciaCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     registro = models.Eficiencia(**payload.dict())
     db.add(registro)
@@ -100,14 +102,14 @@ def crear_eficiencia(
     return registro
 
 # 7.2) Borrar registro (solo admin)
-@app.delete(
-    "/api/eficiencias/{ef_id}",
+@router.delete(
+    "/{ef_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(get_current_active_admin)]
+    dependencies=[Depends(get_current_active_admin)],
 )
 def borrar_eficiencia(
     ef_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     reg = db.query(models.Eficiencia).filter(models.Eficiencia.id == ef_id).first()
     if not reg:
@@ -115,11 +117,11 @@ def borrar_eficiencia(
     db.delete(reg)
     db.commit()
 
-# 7.3) Listar registros (admin o viewer)
-@app.get(
-    "/api/eficiencias",
+# 7.3) Leer registros con filtros y paginación (admin o viewer)
+@router.get(
+    "",
     response_model=list[schemas.Eficiencia],
-    dependencies=[Depends(get_current_active_user)]
+    dependencies=[Depends(get_current_active_user)],
 )
 def leer_eficiencias(
     start:   Optional[date] = None,
@@ -130,52 +132,51 @@ def leer_eficiencias(
     limit:   int            = 100,
     db:      Session        = Depends(get_db),
 ):
-    q = db.query(models.Eficiencia)
-    if start:   q = q.filter(models.Eficiencia.fecha >= start)
-    if end:     q = q.filter(models.Eficiencia.fecha <= end)
-    if linea:   q = q.filter(models.Eficiencia.linea == linea)
-    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
-    recientes = (
-        q.order_by(models.Eficiencia.id.desc())
-         .offset(skip)
-         .limit(limit)
-         .all()
-    )
-    return list(reversed(recientes))
+    try:
+        q = db.query(models.Eficiencia)
+        if start:   q = q.filter(models.Eficiencia.fecha >= start)
+        if end:     q = q.filter(models.Eficiencia.fecha <= end)
+        if linea:   q = q.filter(models.Eficiencia.linea == linea)
+        if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
+        recientes = (
+            q.order_by(models.Eficiencia.id.desc())
+             .offset(skip)
+             .limit(limit)
+             .all()
+        )
+        return list(reversed(recientes))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# 8) Endpoints auxiliares de filtros (admin o viewer)
-@app.get(
-    "/api/eficiencias/lines",
-    dependencies=[Depends(get_current_active_user)]
-)
+# 7.4) Endpoints auxiliares de filtros (admin o viewer)
+@router.get("/lines", dependencies=[Depends(get_current_active_user)])
 def get_lines(db: Session = Depends(get_db)):
-    rows = (
-        db.query(models.Eficiencia.linea)
-          .distinct()
-          .order_by(models.Eficiencia.linea)
-          .all()
-    )
-    return [r[0] for r in rows]
+    try:
+        rows = (
+            db.query(models.Eficiencia.linea)
+              .distinct()
+              .order_by(models.Eficiencia.linea)
+              .all()
+        )
+        return [r[0] for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get(
-    "/api/eficiencias/processes",
-    dependencies=[Depends(get_current_active_user)]
-)
-def get_processes(db: Session = Depends(get_db)):
-    rows = (
-        db.query(models.Eficiencia.proceso)
-          .distinct()
-          .order_by(models.Eficiencia.proceso)
-          .all()
-    )
-    return [r[0] for r in rows]
+@router.get("/processes", dependencies=[Depends(get_current_active_user)])
+def get_processes(db: Session = Depends(get_get_db)):
+    try:
+        rows = (
+            db.query(models.Eficiencia.proceso)
+              .distinct()
+              .order_by(models.Eficiencia.proceso)
+              .all()
+        )
+        return [r[0] for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# 9) Métricas (admin o viewer)
-
-@app.get(
-    "/api/eficiencias/weekly",
-    dependencies=[Depends(get_current_active_user)]
-)
+# 8) Métricas (admin o viewer)
+@router.get("/weekly", dependencies=[Depends(get_current_active_user)])
 def eficiencia_semanal_por_semana(
     start:   Optional[date] = None,
     end:     Optional[date] = None,
@@ -183,28 +184,28 @@ def eficiencia_semanal_por_semana(
     proceso: Optional[str]  = None,
     db:      Session        = Depends(get_db),
 ):
-    q = db.query(
-        models.Eficiencia.semana.label("semana"),
-        models.Eficiencia.proceso.label("proceso"),
-        func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
-    )
-    if start:   q = q.filter(models.Eficiencia.fecha >= start)
-    if end:     q = q.filter(models.Eficiencia.fecha <= end)
-    if linea:   q = q.filter(models.Eficiencia.linea == linea)
-    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
-    q = (
-        q.group_by(models.Eficiencia.semana, models.Eficiencia.proceso)
-         .order_by(models.Eficiencia.semana)
-    )
-    return [
-        {"semana": int(sem), "proceso": proc, "promedio_asociado": float(round(avg, 2))}
-        for sem, proc, avg in q.all()
-    ]
+    try:
+        q = db.query(
+            models.Eficiencia.semana.label("semana"),
+            models.Eficiencia.proceso.label("proceso"),
+            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
+        )
+        if start:   q = q.filter(models.Eficiencia.fecha >= start)
+        if end:     q = q.filter(models.Eficiencia.fecha <= end)
+        if linea:   q = q.filter(models.Eficiencia.linea == linea)
+        if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
+        q = (
+            q.group_by(models.Eficiencia.semana, models.Eficiencia.proceso)
+             .order_by(models.Eficiencia.semana)
+        )
+        return [
+            {"semana": int(sem), "proceso": proc, "promedio_asociado": float(round(avg, 2))}
+            for sem, proc, avg in q.all()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get(
-    "/api/eficiencias/daily/process",
-    dependencies=[Depends(get_current_active_user)]
-)
+@router.get("/daily/process", dependencies=[Depends(get_current_active_user)])
 def eficiencia_diaria_proceso(
     start:   Optional[date] = None,
     end:     Optional[date] = None,
@@ -212,28 +213,28 @@ def eficiencia_diaria_proceso(
     proceso: Optional[str]  = None,
     db:      Session        = Depends(get_db),
 ):
-    q = db.query(
-        models.Eficiencia.fecha.label("fecha"),
-        models.Eficiencia.proceso.label("proceso"),
-        func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
-    )
-    if start:   q = q.filter(models.Eficiencia.fecha >= start)
-    if end:     q = q.filter(models.Eficiencia.fecha <= end)
-    if linea:   q = q.filter(models.Eficiencia.linea == linea)
-    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
-    q = (
-        q.group_by(models.Eficiencia.fecha, models.Eficiencia.proceso)
-         .order_by(models.Eficiencia.fecha)
-    )
-    return [
-        {"fecha": f.isoformat(), "proceso": proc, "promedio_asociado": float(avg)}
-        for f, proc, avg in q.all()
-    ]
+    try:
+        q = db.query(
+            models.Eficiencia.fecha.label("fecha"),
+            models.Eficiencia.proceso.label("proceso"),
+            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
+        )
+        if start:   q = q.filter(models.Eficiencia.fecha >= start)
+        if end:     q = q.filter(models.Eficiencia.fecha <= end)
+        if linea:   q = q.filter(models.Eficiencia.linea == linea)
+        if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
+        q = (
+            q.group_by(models.Eficiencia.fecha, models.Eficiencia.proceso)
+             .order_by(models.Eficiencia.fecha)
+        )
+        return [
+            {"fecha": f.isoformat(), "proceso": proc, "promedio_asociado": float(avg)}
+            for f, proc, avg in q.all()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get(
-    "/api/eficiencias/daily/line",
-    dependencies=[Depends(get_current_active_user)]
-)
+@router.get("/daily/line", dependencies=[Depends(get_current_active_user)])
 def eficiencia_diaria_linea(
     start:   Optional[date] = None,
     end:     Optional[date] = None,
@@ -241,28 +242,28 @@ def eficiencia_diaria_linea(
     proceso: Optional[str]  = None,
     db:      Session        = Depends(get_db),
 ):
-    q = db.query(
-        models.Eficiencia.fecha.label("fecha"),
-        models.Eficiencia.linea.label("linea"),
-        func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
-    )
-    if start:   q = q.filter(models.Eficiencia.fecha >= start)
-    if end:     q = q.filter(models.Eficiencia.fecha <= end)
-    if linea:   q = q.filter(models.Eficiencia.linea == linea)
-    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
-    q = (
-        q.group_by(models.Eficiencia.fecha, models.Eficiencia.linea)
-         .order_by(models.Eficiencia.fecha)
-    )
-    return [
-        {"fecha": f.isoformat(), "linea": l, "promedio_asociado": float(avg)}
-        for f, l, avg in q.all()
-    ]
+    try:
+        q = db.query(
+            models.Eficiencia.fecha.label("fecha"),
+            models.Eficiencia.linea.label("linea"),
+            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
+        )
+        if start:   q = q.filter(models.Eficiencia.fecha >= start)
+        if end:     q = q.filter(models.Eficiencia.fecha <= end)
+        if linea:   q = q.filter(models.Eficiencia.linea == linea)
+        if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
+        q = (
+            q.group_by(models.Eficiencia.fecha, models.Eficiencia.linea)
+             .order_by(models.Eficiencia.fecha)
+        )
+        return [
+            {"fecha": f.isoformat(), "linea": l, "promedio_asociado": float(avg)}
+            for f, l, avg in q.all()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get(
-    "/api/eficiencias/top-associates",
-    dependencies=[Depends(get_current_active_user)]
-)
+@router.get("/top-associates", dependencies=[Depends(get_current_active_user)])
 def worst_associados(
     start:   Optional[date] = None,
     end:     Optional[date] = None,
@@ -271,29 +272,29 @@ def worst_associados(
     limit:   int            = 5,
     db:      Session        = Depends(get_db),
 ):
-    q = db.query(models.Eficiencia)
-    if start:   q = q.filter(models.Eficiencia.fecha >= start)
-    if end:     q = q.filter(models.Eficiencia.fecha <= end)
-    if linea:   q = q.filter(models.Eficiencia.linea == linea)
-    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
-    q2 = (
-        q.with_entities(
-            models.Eficiencia.nombre_asociado.label("nombre"),
-            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
+    try:
+        q = db.query(models.Eficiencia)
+        if start:   q = q.filter(models.Eficiencia.fecha >= start)
+        if end:     q = q.filter(models.Eficiencia.fecha <= end)
+        if linea:   q = q.filter(models.Eficiencia.linea == linea)
+        if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
+        q2 = (
+            q.with_entities(
+                models.Eficiencia.nombre_asociado.label("nombre"),
+                func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
+            )
+            .group_by(models.Eficiencia.nombre_asociado)
+            .order_by(func.avg(models.Eficiencia.eficiencia_asociado).asc())
+            .limit(limit)
         )
-        .group_by(models.Eficiencia.nombre_asociado)
-        .order_by(func.avg(models.Eficiencia.eficiencia_asociado).asc())
-        .limit(limit)
-    )
-    return [
-        {"nombre": nombre, "promedio_asociado": float(round(prom, 2))}
-        for nombre, prom in q2.all()
-    ]
+        return [
+            {"nombre": nombre, "promedio_asociado": float(round(prom, 2))}
+            for nombre, prom in q2.all()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get(
-    "/api/eficiencias/shift",
-    dependencies=[Depends(get_current_active_user)]
-)
+@router.get("/shift", dependencies=[Depends(get_current_active_user)])
 def eficiencia_por_turno(
     start:   Optional[date] = None,
     end:     Optional[date] = None,
@@ -301,27 +302,27 @@ def eficiencia_por_turno(
     proceso: Optional[str]  = None,
     db:      Session        = Depends(get_db),
 ):
-    q = db.query(
-        models.Eficiencia.turno.label("turno"),
-        func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
-    )
-    if start:   q = q.filter(models.Eficiencia.fecha >= start)
-    if end:     q = q.filter(models.Eficiencia.fecha <= end)
-    if linea:   q = q.filter(models.Eficiencia.linea == linea)
-    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
-    q = (
-        q.group_by(models.Eficiencia.turno)
-         .order_by(models.Eficiencia.turno)
-    )
-    return [
-        {"turno": t, "promedio_asociado": float(round(p, 2))}
-        for t, p in q.all()
-    ]
+    try:
+        q = db.query(
+            models.Eficiencia.turno.label("turno"),
+            func.avg(models.Eficiencia.eficiencia_asociado).label("promedio_asociado")
+        )
+        if start:   q = q.filter(models.Eficiencia.fecha >= start)
+        if end:     q = q.filter(models.Eficiencia.fecha <= end)
+        if linea:   q = q.filter(models.Eficiencia.linea == linea)
+        if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
+        q = (
+            q.group_by(models.Eficiencia.turno)
+             .order_by(models.Eficiencia.turno)
+        )
+        return [
+            {"turno": t, "promedio_asociado": float(round(p, 2))}
+            for t, p in q.all()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get(
-    "/api/eficiencias/counts",
-    dependencies=[Depends(get_current_active_user)]
-)
+@router.get("/counts", dependencies=[Depends(get_current_active_user)])
 def conteo_sw_wd_por_linea(
     start:   Optional[date] = None,
     end:     Optional[date] = None,
@@ -329,28 +330,28 @@ def conteo_sw_wd_por_linea(
     proceso: Optional[str]  = None,
     db:      Session        = Depends(get_db),
 ):
-    sub = db.query(
-        models.Eficiencia.linea.label("linea"),
-        models.Eficiencia.tipo_proceso.label("tipo_proceso"),
-        func.sum(models.Eficiencia.piezas).label("total_piezas")
-    )
-    if start:   sub = sub.filter(models.Eficiencia.fecha >= start)
-    if end:     sub = sub.filter(models.Eficiencia.fecha <= end)
-    if linea:   sub = sub.filter(models.Eficiencia.linea == linea)
-    if proceso: sub = sub.filter(models.Eficiencia.proceso == proceso)
-    q = (
-        sub.group_by(models.Eficiencia.linea, models.Eficiencia.tipo_proceso)
-           .order_by(models.Eficiencia.linea)
-    )
-    return [
-        {"linea": linea, "tipo_proceso": tp, "total_piezas": int(tpz)}
-        for linea, tp, tpz in q.all()
-    ]
+    try:
+        sub = db.query(
+            models.Eficiencia.linea.label("linea"),
+            models.Eficiencia.tipo_proceso.label("tipo_proceso"),
+            func.sum(models.Eficiencia.piezas).label("total_piezas")
+        )
+        if start:   sub = sub.filter(models.Eficiencia.fecha >= start)
+        if end:     sub = sub.filter(models.Eficiencia.fecha <= end)
+        if linea:   sub = sub.filter(models.Eficiencia.linea == linea)
+        if proceso: sub = sub.filter(models.Eficiencia.proceso == proceso)
+        q = (
+            sub.group_by(models.Eficiencia.linea, models.Eficiencia.tipo_proceso)
+               .order_by(models.Eficiencia.linea)
+        )
+        return [
+            {"linea": linea, "tipo_proceso": tp, "total_piezas": int(tpz)}
+            for linea, tp, tpz in q.all()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get(
-    "/api/eficiencias/weekly/downtime",
-    dependencies=[Depends(get_current_active_user)]
-)
+@router.get("/weekly/downtime", dependencies=[Depends(get_current_active_user)])
 def downtime_weekly_by_line(
     start:   Optional[date] = None,
     end:     Optional[date] = None,
@@ -358,29 +359,29 @@ def downtime_weekly_by_line(
     proceso: Optional[str]  = None,
     db:      Session        = Depends(get_db),
 ):
-    q = db.query(
-        models.Eficiencia.semana.label("semana"),
-        models.Eficiencia.linea.label("linea"),
-        func.avg(models.Eficiencia.tiempo_muerto).label("avg_downtime")
-    )
-    if start:   q = q.filter(models.Eficiencia.fecha >= start)
-    if end:     q = q.filter(models.Eficiencia.fecha <= end)
-    if linea:   q = q.filter(models.Eficiencia.linea == linea)
-    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
-    q = (
-        q.group_by(models.Eficiencia.semana, models.Eficiencia.linea)
-         .order_by(models.Eficiencia.semana)
-    )
-    return [
-        {"semana": int(sem), "linea": line, "avg_downtime": float(round(dt, 2))}
-        for sem, line, dt in q.all()
-    ]
+    try:
+        q = db.query(
+            models.Eficiencia.semana.label("semana"),
+            models.Eficiencia.linea.label("linea"),
+            func.avg(models.Eficiencia.tiempo_muerto).label("avg_downtime")
+        )
+        if start:   q = q.filter(models.Eficiencia.fecha >= start)
+        if end:     q = q.filter(models.Eficiencia.fecha <= end)
+        if linea:   q = q.filter(models.Eficiencia.linea == linea)
+        if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
+        q = (
+            q.group_by(models.Eficiencia.semana, models.Eficiencia.linea)
+             .order_by(models.Eficiencia.semana)
+        )
+        return [
+            {"semana": int(sem), "linea": line, "avg_downtime": float(round(dt, 2))}
+            for sem, line, dt in q.all()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# 10) Subida masiva desde Excel (solo admin)
-@app.post(
-    "/api/eficiencias/upload",
-    dependencies=[Depends(get_current_active_admin)]
-)
+# 9) Subida masiva desde Excel (solo admin)
+@router.post("/upload", dependencies=[Depends(get_current_active_admin)])
 async def upload_eficiencias(
     file: UploadFile = File(...),
     db:   Session    = Depends(get_db),
@@ -411,25 +412,32 @@ async def upload_eficiencias(
         for opt in ('wwid','tiempo_muerto','fecha'):
             if opt not in df.columns:
                 df[opt] = None
-        df['semana']             = semana_val
-        df['piezas']             = pd.to_numeric(df['piezas'], errors='coerce').fillna(0).astype(int)
-        df['eficiencia_asociado']= pd.to_numeric(df['eficiencia_asociado'], errors='coerce').fillna(0.0)
-        df['tiempo_muerto']      = pd.to_numeric(df['tiempo_muerto'], errors='coerce')
+        df['semana'] = semana_val
+        df['piezas'] = pd.to_numeric(df['piezas'], errors='coerce').fillna(0).astype(int)
+        df['eficiencia_asociado'] = pd.to_numeric(df['eficiencia_asociado'], errors='coerce').fillna(0.0)
+        df['tiempo_muerto'] = pd.to_numeric(df['tiempo_muerto'], errors='coerce')
         if 'fecha' in df.columns:
             df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce').dt.date
         frames.append(df)
 
     if not frames:
         return {"insertados": 0}
+
     big_df = pd.concat(frames, ignore_index=True)
     allowed_cols = {c.name for c in models.Eficiencia.__table__.columns}
-    registros = [models.Eficiencia(**{k:v for k,v in row.items() if k in allowed_cols})
-                 for row in big_df.to_dict(orient='records')]
+
+    registros = [
+        models.Eficiencia(**{k: v for k, v in row.items() if k in allowed_cols})
+        for row in big_df.to_dict(orient='records')
+    ]
     try:
         db.bulk_save_objects(registros)
         db.commit()
     except Exception as e:
         db.rollback()
-        print("ERROR al insertar:", e)
-        raise HTTPException(500, "Error insertando en BD. Revisa la terminal para detalles.")
+        raise HTTPException(500, "Error insertando en BD. Revisa logs para más detalles.")
+
     return {"insertados": len(registros)}
+
+# 10) Finalmente, monta el router principal
+app.include_router(router)
