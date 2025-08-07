@@ -163,7 +163,7 @@ def get_lines(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/processes", dependencies=[Depends(get_current_active_user)])
-def get_processes(db: Session = Depends(get_get_db)):
+def get_processes(db: Session = Depends(get_db)):
     try:
         rows = (
             db.query(models.Eficiencia.proceso)
