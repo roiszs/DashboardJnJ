@@ -29,6 +29,11 @@ from auth import (
     UserRead, UserCreate, UserUpdate, 
 )
 
+from sqlalchemy import inspect
+print("USER TABLE:", models.User.__table__)
+print("USER PK:", [c.name for c in inspect(models.User).primary_key])
+
+
 # 1) Instancia de FastAPI
 # 2) Evento de arranque: crea todas las tablas (usuarios + eficiencias)
 @asynccontextmanager

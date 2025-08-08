@@ -1,11 +1,14 @@
+# models.py
 from sqlalchemy import String, Float, Date, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column
 from database import Base
 from datetime import date
-from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
+from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable  # <- importante
 
-class User(SQLAlchemyBaseUserTable[int], Base):  # <-- [int] es CLAVE
-    # id, email, hashed_password, is_active, is_superuser, is_verified vienen del mixin
+class User(SQLAlchemyBaseUserTable[int], Base):
+    # Debes definir la PK tú mismo al usar [int]
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, autoincrement=True)
+    # Campos base (email, hashed_password, is_active, is_superuser, is_verified) los aporta el mixin
     role: Mapped[str] = mapped_column(String, default="viewer", nullable=False)
 
 class Eficiencia(Base):
