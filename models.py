@@ -1,4 +1,3 @@
-# models.py
 from sqlalchemy import Column, Integer, String, Boolean, Float, Date, text
 from database import Base
 from datetime import date
@@ -6,7 +5,6 @@ from datetime import date
 from fastapi_users.db import SQLAlchemyBaseUserTable  # id:int
 
 class User(SQLAlchemyBaseUserTable, Base):
-    # __tablename__ = "users"  # <- NO la redefinas
     role = Column(String, default="viewer", nullable=False)
 
 class Eficiencia(Base):
