@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from fastapi_users import FastAPIUsers, BaseUserManager, IntegerIDMixin, schemas
 from fastapi_users.authentication import BearerTransport, JWTStrategy, AuthenticationBackend
-from fastapi_users.db import SQLAlchemyUserDatabase
+from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 
 from database import SessionLocal
 from models import User

@@ -1,13 +1,11 @@
-# models.py
-from sqlalchemy import String, Boolean, Float, Date, Integer, text
+from sqlalchemy import String, Float, Date, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column
 from database import Base
 from datetime import date
+from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
 
-from fastapi_users.db import SQLAlchemyBaseUserTable  # id:int
-
-class User(SQLAlchemyBaseUserTable, Base):
-    # El mixin ya define: id (PK), email, hashed_password, is_active, is_superuser, is_verified
+class User(SQLAlchemyBaseUserTable[int], Base):  # <-- [int] es CLAVE
+    # id, email, hashed_password, is_active, is_superuser, is_verified vienen del mixin
     role: Mapped[str] = mapped_column(String, default="viewer", nullable=False)
 
 class Eficiencia(Base):
@@ -23,4 +21,4 @@ class Eficiencia(Base):
     fecha: Mapped[date] = mapped_column(Date,    nullable=False, default=date.today, index=True)
     turno: Mapped[str] = mapped_column(String,  nullable=False, index=True)
     piezas: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    tiempo_muerto: Mapped[float] = mapped_column(Float,   nullable=False, default=0.0, server_default=text("0.0"), index=True)
+    tiempo_muerto: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, server_default=text("0.0"), index=True)
