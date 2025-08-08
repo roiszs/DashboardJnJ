@@ -22,6 +22,7 @@ from auth import (
     auth_backend,
     get_current_active_user,
     get_current_active_admin,
+    UserRead, UserCreate, UserUpdate, 
 )
 
 # 1) Instancia de FastAPI
@@ -42,12 +43,12 @@ app.include_router(
     tags=["auth"],
 )
 app.include_router(
-    fastapi_users.get_register_router(),
+    fastapi_users.get_register_router(UserRead, UserCreate),  # <—
     prefix="/auth",
     tags=["auth"],
 )
 app.include_router(
-    fastapi_users.get_users_router(),
+    fastapi_users.get_users_router(UserRead, UserUpdate),     # <—
     prefix="/users",
     tags=["users"],
 )
