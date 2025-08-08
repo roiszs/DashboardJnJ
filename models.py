@@ -3,13 +3,11 @@ from sqlalchemy import Column, Integer, String, Boolean, Float, Date, text
 from database import Base
 from datetime import date
 
-from fastapi_users.db import SQLAlchemyBaseUserTable  # <— clave
+from fastapi_users.db import SQLAlchemyBaseUserTable  # id:int
 
-class User(Base, SQLAlchemyBaseUserTable):  # id:int
-    __tablename__ = "users"
-    # Campos estándar ya vienen de SQLAlchemyBaseUserTable:
-    # id (Integer, PK), email, hashed_password, is_active, is_superuser, is_verified
-    role = Column(String, default="viewer", nullable=False)  # tu extra
+class User(SQLAlchemyBaseUserTable, Base):
+    # __tablename__ = "users"  # <- NO la redefinas
+    role = Column(String, default="viewer", nullable=False)
 
 class Eficiencia(Base):
     __tablename__ = "eficiencias"
