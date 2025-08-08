@@ -1,81 +1,77 @@
 # auth.py
-from typing import Optional
+import uuid
+from typing import Optional, AsyncGenerator
+
 from fastapi import Depends, HTTPException, status
-from fastapi_users import FastAPIUsers
-from fastapi_users.db import SQLAlchemyUserDatabase
-from fastapi_users.models import BaseUser, BaseUserCreate, BaseUserUpdate, BaseUserDB
+from sqlalchemy.orm import Session
+
+from fastapi_users import FastAPIUsers, BaseUserManager, IntegerIDMixin
+from fastapi_users import schemas
 from fastapi_users.authentication import (
     BearerTransport,
     JWTStrategy,
     AuthenticationBackend,
 )
-from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
-from sqlalchemy import Column, Integer, String, Boolean
-from database import engine, SessionLocal
+from fastapi_users.db import SQLAlchemyUserDatabase
 
-# 0) Tu modelo SQLAlchemy de la tabla "users"
-Base: DeclarativeMeta = declarative_base()
+from database import SessionLocal
+from models import User
 
-class UserTable(Base):
-    __tablename__ = "users"
-    id              = Column(Integer, primary_key=True, index=True)
-    email           = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String(length=1024), nullable=False)
-    is_active       = Column(Boolean, default=True, nullable=False)
-    role            = Column(String, default="viewer", nullable=False)
-
-# Crea la tabla si no existía
-Base.metadata.create_all(bind=engine)
-
-# 1) Pydantic schemas de FastAPI-Users (sin parámetros genéricos)
-class User(BaseUser):
-    role: str
-
-class UserCreate(BaseUserCreate):
-    role: Optional[str] = None
-
-class UserUpdate(BaseUserUpdate):
-    role: Optional[str] = None
-
-class UserDB(User, BaseUserDB):
-    pass
-
-# 2) Dependency que proporciona el UserDB
-async def get_user_db():
+# ====== DB session dep ======
+def get_db() -> Session:
     db = SessionLocal()
     try:
-        yield SQLAlchemyUserDatabase(UserDB, db, UserTable)
+        yield db
     finally:
         db.close()
 
-# 3) Configuración de JWT
-bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+async def get_user_db(
+    session: Session = Depends(get_db),
+) -> AsyncGenerator[SQLAlchemyUserDatabase, None]:
+    yield SQLAlchemyUserDatabase(session, User)
+
+# ====== User Schemas ======
+class UserRead(schemas.BaseUser[int]):
+    role: str
+
+class UserCreate(schemas.BaseUserCreate):
+    role: str = "viewer"
+
+class UserUpdate(schemas.BaseUserUpdate):
+    role: Optional[str] = None
+
+# ====== User Manager ======
 SECRET = "TU_SECRETO_MUY_SEGUR0_Y_LARGO"
-jwt_strategy = JWTStrategy(secret=SECRET, lifetime_seconds=3600)
+
+class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
+    reset_password_token_secret = SECRET
+    verification_token_secret = SECRET
+
+    async def on_after_register(self, user: User, request=None):
+        # Puedes loguear o enviar correo, etc.
+        pass
+
+async def get_user_manager(user_db=Depends(get_user_db)):
+    yield UserManager(user_db)
+
+# ====== Auth backend (JWT Bearer) ======
+bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+
+def get_jwt_strategy() -> JWTStrategy:
+    return JWTStrategy(secret=SECRET, lifetime_seconds=3600)
 
 auth_backend = AuthenticationBackend(
     name="jwt",
     transport=bearer_transport,
-    get_strategy=lambda: jwt_strategy,
+    get_strategy=get_jwt_strategy,
 )
 
-# 4) Instancia FastAPI-Users
-fastapi_users = FastAPIUsers(
-    get_user_db,
-    [auth_backend],
-    User,
-    UserCreate,
-    UserUpdate,
-    UserDB,
-)
+# ====== FastAPI-Users instance ======
+fastapi_users = FastAPIUsers[User, int](get_user_manager, [auth_backend])
 
-# 5) Dependencias para proteger rutas
 get_current_active_user = fastapi_users.current_user(active=True)
-
-def get_current_active_admin(
-    user: UserDB = Depends(get_current_active_user)
-):
-    if user.role != "admin":
+def get_current_active_admin(user: User = Depends(get_current_active_user)):
+    if not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Solo los administradores pueden acceder",
