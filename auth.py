@@ -16,9 +16,11 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 
 from database import SessionLocal
 from models import User
+from sqlalchemy.orm import Session
+from collections.abc import Generator
 
 # ====== DB session dep ======
-def get_db() -> Session:
+def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
         yield db
