@@ -65,25 +65,17 @@ app.include_router(
 )
 
 # 5) Páginas HTML
-@app.get("/login.html", response_class=FileResponse)
+@app.get("/login.html")
 def serve_login():
-    return "static/login.html"
+    return FileResponse("static/login.html")  
 
-@app.get(
-    "/",
-    response_class=FileResponse,
-    dependencies=[Depends(get_current_active_user)],
-)
+@app.get("/")
 def serve_dashboard():
-    return "static/index.html"
+    return FileResponse("static/index.html")  
 
-@app.get(
-    "/add.html",
-    response_class=FileResponse,
-    dependencies=[Depends(get_current_active_user)],
-)
+@app.get("/add.html")
 def serve_form():
-    return "static/add.html"
+    return FileResponse("static/add.html")    
 
 # 6) Dependencia para obtener la sesión de BD
 def get_db():
