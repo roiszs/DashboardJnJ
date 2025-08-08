@@ -15,7 +15,11 @@ from datetime import date
 from typing import Optional
 
 import models, schemas
-from database import engine, SessionLocal
+from database import engine, SessionLocal 
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
+import models
+from database import engine
 
 from auth import (
     fastapi_users,
@@ -26,12 +30,14 @@ from auth import (
 )
 
 # 1) Instancia de FastAPI
-app = FastAPI(title="Dashboard J&J")
-
 # 2) Evento de arranque: crea todas las tablas (usuarios + eficiencias)
-@app.on_event("startup")
-def on_startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
     models.Base.metadata.create_all(bind=engine)
+    yield
+    # shutdown (si necesitas cerrar algo)
+app = FastAPI(title="Dashboard J&J")
 
 # 3) Monta los estáticos (CSS, JS, imágenes)
 app.mount("/static", StaticFiles(directory="static"), name="static")
