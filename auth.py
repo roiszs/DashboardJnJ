@@ -1,23 +1,16 @@
-# auth.py
-import uuid
+# auth.py (versión pulida)
 from typing import Optional, AsyncGenerator
+from collections.abc import Generator
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from fastapi_users import FastAPIUsers, BaseUserManager, IntegerIDMixin
-from fastapi_users import schemas
-from fastapi_users.authentication import (
-    BearerTransport,
-    JWTStrategy,
-    AuthenticationBackend,
-)
+from fastapi_users import FastAPIUsers, BaseUserManager, IntegerIDMixin, schemas
+from fastapi_users.authentication import BearerTransport, JWTStrategy, AuthenticationBackend
 from fastapi_users.db import SQLAlchemyUserDatabase
 
 from database import SessionLocal
 from models import User
-from sqlalchemy.orm import Session
-from collections.abc import Generator
 
 # ====== DB session dep ======
 def get_db() -> Generator[Session, None, None]:
@@ -50,14 +43,13 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
     verification_token_secret = SECRET
 
     async def on_after_register(self, user: User, request=None):
-        # Puedes loguear o enviar correo, etc.
         pass
 
-async def get_user_manager(user_db=Depends(get_user_db)):
+async def get_user_manager(user_db=Depends(get_user_db)) -> AsyncGenerator[UserManager, None]:
     yield UserManager(user_db)
 
 # ====== Auth backend (JWT Bearer) ======
-bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+bearer_transport = BearerTransport(tokenUrl="/auth/jwt/login")
 
 def get_jwt_strategy() -> JWTStrategy:
     return JWTStrategy(secret=SECRET, lifetime_seconds=3600)
@@ -72,6 +64,7 @@ auth_backend = AuthenticationBackend(
 fastapi_users = FastAPIUsers[User, int](get_user_manager, [auth_backend])
 
 get_current_active_user = fastapi_users.current_user(active=True)
+
 def get_current_active_admin(user: User = Depends(get_current_active_user)):
     if not user.is_superuser:
         raise HTTPException(
