@@ -72,10 +72,8 @@ fastapi_users = FastAPIUsers[User, int](get_user_manager, [auth_backend])
 get_current_active_user = fastapi_users.current_user(active=True)
 
 def get_current_active_admin(user: User = Depends(get_current_active_user)):
-    if not user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo los administradores pueden acceder",
-        )
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo los administradores pueden acceder")
     return user
+
 
