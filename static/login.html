@@ -44,5 +44,65 @@
     }
   });
   </script>
+  <script>
+  // --- Config ---
+  const API_BASE = ""; // mismo host: deja vacío (sirve en dev con uvicorn)
+  const LOGIN_URL = `${API_BASE}/auth/jwt/login`;
+
+  async function login(email, password) {
+    try {
+      const body = new URLSearchParams({ username: email, password });
+      const r = await fetch(LOGIN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body
+      });
+
+      if (!r.ok) {
+        const msg = await r.text();
+        alert("Credenciales inválidas o error de servidor.\n\n" + msg);
+        return;
+      }
+
+      const data = await r.json(); // { access_token, token_type }
+      localStorage.setItem("token", data.access_token);
+
+      // opcional: trae /users/me para saber rol
+      const me = await fetch(`${API_BASE}/users/me`, {
+        headers: { Authorization: `Bearer ${data.access_token}` }
+      });
+      if (me.ok) {
+        const user = await me.json();
+        localStorage.setItem("user_email", user.email || "");
+        localStorage.setItem("user_role", user.role || "");
+      }
+
+      // redirige al dashboard
+      window.location.href = "/";
+    } catch (e) {
+      console.error(e);
+      alert("Error de red. Revisa que el servidor esté corriendo.");
+    }
+  }
+
+  // wireup del botón
+  document.getElementById("btn-login")?.addEventListener("click", async (ev) => {
+    ev.preventDefault();
+    const email = (document.getElementById("email")?.value || "").trim();
+    const password = (document.getElementById("password")?.value || "").trim();
+    if (!email || !password) {
+      alert("Por favor ingresa email y contraseña.");
+      return;
+    }
+    await login(email, password);
+  });
+
+  // si ya hay token, vete directo al dashboard
+  (function autoRedirectIfLoggedIn() {
+    const token = localStorage.getItem("token");
+    if (token) window.location.href = "/";
+  })();
+</script>
+
 </body>
 </html>
