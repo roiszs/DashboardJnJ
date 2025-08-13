@@ -189,6 +189,103 @@
     });
   })();
 </script>
+<script>
+  const API_BASE = "";
+  const TOKEN = localStorage.getItem("token");
+
+  if (!TOKEN) {
+    window.location.href = "/login.html";
+  }
+
+  // verifica rol admin (opcional, desde el frontend)
+  (function checkAdminFrontend() {
+    const role = localStorage.getItem("user_role") || "";
+    if (role !== "admin") {
+      alert("Esta página es solo para administradores.");
+      window.location.href = "/";
+    }
+  })();
+
+  async function crearRegistro(payload) {
+    const res = await fetch(`${API_BASE}/api/eficiencias`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${TOKEN}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "/login.html";
+      return;
+    }
+
+    if (res.status === 403) {
+      const msg = await res.text();
+      alert("No tienes permisos de administrador.\n\n" + msg);
+      return null;
+    }
+
+    if (!res.ok) {
+      const txt = await res.text();
+      alert("Error al crear registro:\n\n" + txt);
+      return null;
+    }
+
+    return res.json();
+  }
+
+  function leerForm() {
+    // Validaciones mínimas; ajusta según necesites
+    const payload = {
+      nombre_asociado: (document.getElementById("nombre_asociado")?.value || "").trim(),
+      linea: (document.getElementById("linea")?.value || "").trim(),
+      supervisor: (document.getElementById("supervisor")?.value || "").trim(),
+      tipo_proceso: (document.getElementById("tipo_proceso")?.value || "").trim(), // "SW" o "WD"
+      proceso: (document.getElementById("proceso")?.value || "").trim(),
+      eficiencia_asociado: parseFloat(document.getElementById("eficiencia_asociado")?.value || "0"),
+      semana: parseInt(document.getElementById("semana")?.value || "0", 10),
+      turno: (document.getElementById("turno")?.value || "").trim(),
+      piezas: parseInt(document.getElementById("piezas")?.value || "0", 10),
+      tiempo_muerto: parseFloat(document.getElementById("tiempo_muerto")?.value || "0")
+    };
+
+    // Validaciones básicas
+    if (!payload.nombre_asociado || !payload.linea || !payload.supervisor || !payload.tipo_proceso || !payload.proceso || !payload.turno) {
+      alert("Completa los campos obligatorios.");
+      return null;
+    }
+    if (!["SW", "WD"].includes(payload.tipo_proceso)) {
+      alert("tipo_proceso debe ser SW o WD.");
+      return null;
+    }
+    if (Number.isNaN(payload.semana) || payload.semana <= 0) {
+      alert("Semana debe ser un entero mayor a 0.");
+      return null;
+    }
+    if (Number.isNaN(payload.eficiencia_asociado)) payload.eficiencia_asociado = 0;
+    if (Number.isNaN(payload.piezas)) payload.piezas = 0;
+    if (Number.isNaN(payload.tiempo_muerto)) payload.tiempo_muerto = 0;
+
+    return payload;
+  }
+
+  document.getElementById("btn-crear")?.addEventListener("click", async (ev) => {
+    ev.preventDefault();
+    const payload = leerForm();
+    if (!payload) return;
+
+    const creado = await crearRegistro(payload);
+    if (creado) {
+      alert("Registro creado con éxito (ID: " + creado.id + ").");
+      // opcional: limpiar el formulario
+      // document.querySelector("form")?.reset();
+    }
+  });
+</script>
+
 
   
 </body>
