@@ -5,6 +5,7 @@ from database import Base
 from datetime import date
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable  # <- importante
 
+
 class User(SQLAlchemyBaseUserTable[int], Base):
     # Debes definir la PK tú mismo al usar [int]
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, autoincrement=True)
