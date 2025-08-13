@@ -3,13 +3,14 @@ from typing import Optional, AsyncGenerator
 from collections.abc import Generator
 
 from fastapi import Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from fastapi_users import FastAPIUsers, BaseUserManager, IntegerIDMixin, schemas
 from fastapi_users.authentication import BearerTransport, JWTStrategy, AuthenticationBackend
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 
-from database import SessionLocal
+from database import SessionLocal, AsyncSessionLocal
 from models import User
 
 # ====== DB session dep ======
@@ -20,8 +21,13 @@ def get_db() -> Generator[Session, None, None]:
     finally:
         db.close()
 
+        # ====== DB async (fastapi-users) ======
+async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        yield session
+
 async def get_user_db(
-    session: Session = Depends(get_db),
+    session: Session = Depends(get_async_db),
 ) -> AsyncGenerator[SQLAlchemyUserDatabase, None]:
     yield SQLAlchemyUserDatabase(session, User)
 
