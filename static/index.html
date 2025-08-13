@@ -963,3 +963,85 @@ async function renderDowntime() {
     renderAll();
   });
 </script>
+<script>
+  const API_BASE = "";
+  const TOKEN = localStorage.getItem("token");
+
+  // Redirige a login si no hay token
+  if (!TOKEN) {
+    window.location.href = "/login.html";
+  }
+
+  // logout
+  document.getElementById("btn-logout")?.addEventListener("click", () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_email");
+    localStorage.removeItem("user_role");
+    window.location.href = "/login.html";
+  });
+
+  async function fetchEficiencias() {
+    const url = `${API_BASE}/api/eficiencias?limit=50`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${TOKEN}` }
+    });
+
+    if (res.status === 401) {
+      // token inválido o vencido
+      localStorage.removeItem("token");
+      window.location.href = "/login.html";
+      return;
+    }
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error("Error cargando eficiencias: " + txt);
+    }
+
+    return res.json();
+  }
+
+  function renderTabla(data) {
+    const cont = document.getElementById("tabla-eficiencias");
+    if (!cont) return;
+
+    if (!data || !data.length) {
+      cont.innerHTML = `<p>No hay registros aún.</p>`;
+      return;
+    }
+
+    const headers = [
+      "id", "nombre_asociado", "linea", "supervisor", "tipo_proceso",
+      "proceso", "eficiencia_asociado", "semana", "turno", "piezas", "tiempo_muerto"
+    ];
+
+    const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>`;
+    const rows = data.map(row => {
+      return `<tr>${headers.map(h => `<td>${row[h] ?? ""}</td>`).join("")}</tr>`;
+    }).join("");
+    const tbody = `<tbody>${rows}</tbody>`;
+
+    cont.innerHTML = `<table border="1" cellpadding="6" cellspacing="0">${thead}${tbody}</table>`;
+  }
+
+  // pinta el rol y correo en alguna parte si tienes spans
+  (function paintUserInfo() {
+    const email = localStorage.getItem("user_email") || "";
+    const role = localStorage.getItem("user_role") || "";
+    const elEmail = document.getElementById("user-email");
+    const elRole = document.getElementById("user-role");
+    if (elEmail) elEmail.textContent = email;
+    if (elRole) elRole.textContent = role;
+  })();
+
+  // carga inicial
+  (async function init() {
+    try {
+      const data = await fetchEficiencias();
+      renderTabla(data);
+    } catch (e) {
+      console.error(e);
+      alert(e.message);
+    }
+  })();
+</script>
