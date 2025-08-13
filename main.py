@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     models.Base.metadata.create_all(bind=engine)
     yield
     # shutdown (si necesitas cerrar algo)
-app = FastAPI(title="Dashboard J&J")
+app = FastAPI(title="Dashboard J&J", lifespan=lifespan)
 
 # 3) Monta los estáticos (CSS, JS, imágenes)
 app.mount("/static", StaticFiles(directory="static"), name="static")
