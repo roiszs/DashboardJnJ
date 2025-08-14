@@ -667,6 +667,7 @@
     };
 
     async function renderAll() {
+      await loadFilterOptions();
       await safeRender(renderDashboard);
       await safeRender(renderKPIs);
       await safeRender(renderWeekly);
