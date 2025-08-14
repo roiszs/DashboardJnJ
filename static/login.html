@@ -4,105 +4,89 @@
   <meta charset="UTF-8" />
   <title>Ingreso – Dashboard J&J</title>
   <style>
-    /* pon aquí tu Tailwind o CSS mínimo */
-    body { display:flex; align-items:center; justify-content:center; height:100vh; font-family:sans-serif }
-    form { background:#fff; padding:2rem; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1) }
-    input, button { width:100%; margin-top:1rem; padding:.75rem; }
-    button { background:red; color:#fff; border:none; cursor:pointer; }
-    button:hover { background:green; }
+    body { display:flex; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; background:#f6f6f6; }
+    form { background:#fff; padding:2rem; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); width:320px; }
+    h1 { margin:0 0 1rem; font-size:1.25rem; }
+    label { font-size:.9rem; color:#444; }
+    input, button { width:100%; margin-top:.5rem; margin-bottom:1rem; padding:.75rem; border-radius:6px; border:1px solid #ddd; }
+    button { background:#e2231a; color:#fff; border:none; cursor:pointer; font-weight:600; }
+    button:hover { background:#198754; }
+    #loginMsg { color:#c00; min-height:1.25rem; }
   </style>
 </head>
 <body>
   <form id="loginForm">
     <h1>Iniciar sesión</h1>
-    <input type="email" name="username" placeholder="Email corporativo" required />
-    <input type="password" name="password" placeholder="Password" required />
-    <button type="submit">Entrar</button>
-    <div id="loginMsg" style="margin-top:1rem;color:red;"></div>
+
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" placeholder="Email corporativo" required />
+
+    <label for="password">Contraseña</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="Password" required />
+
+    <button id="btn-login" type="button">Entrar</button>
+    <div id="loginMsg"></div>
   </form>
 
   <script>
-  document.getElementById('loginForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const msg = document.getElementById('loginMsg');
-    const f   = new FormData(e.target);
-    try {
-      const res = await fetch('/auth/jwt/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: f.get('username'),
-          password: f.get('password')
-        })
-      });
-      if (!res.ok) throw await res.text();
-      const { access_token } = await res.json();
-      localStorage.setItem('token', access_token);
-      window.location.href = '/';  // al dashboard
-    } catch(err) {
-      msg.textContent = '❌ ' + err;
+    // === Config ===
+    const API_BASE = ""; // mismo host en dev (deja vacío)
+
+    // Redirige si ya hay sesión
+    (function autoRedirectIfLoggedIn() {
+      if (localStorage.getItem("token")) window.location.href = "/";
+    })();
+
+    async function login(email, password) {
+      const msg = document.getElementById("loginMsg");
+      msg.textContent = "";
+
+      try {
+        // IMPORTANTE: urlencoded, NO JSON
+        const body = new URLSearchParams({ username: email, password });
+        const res = await fetch(`${API_BASE}/auth/jwt/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          msg.textContent = "❌ " + txt;
+          return;
+        }
+
+        const data = await res.json(); // { access_token, token_type }
+        localStorage.setItem("token", data.access_token);
+
+        // (Opcional) Obtener info del usuario y rol
+        const me = await fetch(`${API_BASE}/users/me`, {
+          headers: { Authorization: `Bearer ${data.access_token}` }
+        });
+        if (me.ok) {
+          const user = await me.json();
+          localStorage.setItem("user_email", user.email || "");
+          localStorage.setItem("user_role", user.role || "");
+        }
+
+        // Ir al dashboard
+        window.location.href = "/";
+      } catch (e) {
+        console.error(e);
+        msg.textContent = "❌ Error de red. ¿Servidor corriendo?";
+      }
     }
-  });
-  </script>
-  <script>
-  // --- Config ---
-  const API_BASE = ""; // mismo host: deja vacío (sirve en dev con uvicorn)
-  const LOGIN_URL = `${API_BASE}/auth/jwt/login`;
 
-  async function login(email, password) {
-    try {
-      const body = new URLSearchParams({ username: email, password });
-      const r = await fetch(LOGIN_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body
-      });
-
-      if (!r.ok) {
-        const msg = await r.text();
-        alert("Credenciales inválidas o error de servidor.\n\n" + msg);
+    document.getElementById("btn-login").addEventListener("click", async (ev) => {
+      ev.preventDefault(); // evita submit del form
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      if (!email || !password) {
+        document.getElementById("loginMsg").textContent = "Ingresa email y contraseña.";
         return;
       }
-
-      const data = await r.json(); // { access_token, token_type }
-      localStorage.setItem("token", data.access_token);
-
-      // opcional: trae /users/me para saber rol
-      const me = await fetch(`${API_BASE}/users/me`, {
-        headers: { Authorization: `Bearer ${data.access_token}` }
-      });
-      if (me.ok) {
-        const user = await me.json();
-        localStorage.setItem("user_email", user.email || "");
-        localStorage.setItem("user_role", user.role || "");
-      }
-
-      // redirige al dashboard
-      window.location.href = "/";
-    } catch (e) {
-      console.error(e);
-      alert("Error de red. Revisa que el servidor esté corriendo.");
-    }
-  }
-
-  // wireup del botón
-  document.getElementById("btn-login")?.addEventListener("click", async (ev) => {
-    ev.preventDefault();
-    const email = (document.getElementById("email")?.value || "").trim();
-    const password = (document.getElementById("password")?.value || "").trim();
-    if (!email || !password) {
-      alert("Por favor ingresa email y contraseña.");
-      return;
-    }
-    await login(email, password);
-  });
-
-  // si ya hay token, vete directo al dashboard
-  (function autoRedirectIfLoggedIn() {
-    const token = localStorage.getItem("token");
-    if (token) window.location.href = "/";
-  })();
-</script>
-
+      await login(email, password);
+    });
+  </script>
 </body>
 </html>
