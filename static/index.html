@@ -672,30 +672,25 @@
       tr?.parentNode?.removeChild(tr);
     };
 
-    // Render maestro: ¡NO repuebla filtros aquí!
     async function renderAll() {
-      await safeRender(renderDashboard);
-      await safeRender(renderKPIs);
-      await safeRender(renderWeekly);
-      await safeRender(renderDailyProcess);
-      await safeRender(renderDailyLine);
-      await safeRender(renderTopAssociates);
-      await safeRender(renderShift);
-      await safeRender(renderCounts);
-      await safeRender(renderDowntime);
-    }
+    await safeRender(renderDashboard);
+    await safeRender(renderKPIs);
+    await safeRender(renderWeekly);
+    await safeRender(renderDailyProcess);
+    await safeRender(renderDailyLine);
+    await safeRender(renderTopAssociates);
+    await safeRender(renderShift);
+    await safeRender(renderCounts);
+    await safeRender(renderDowntime);
+  }
 
-    // Listeners de filtros para aplicar automáticamente
-    ['filterStart','filterEnd','filterLinea','filterProceso'].forEach(id => {
-      document.getElementById(id).addEventListener('change', renderAll);
-    });
-
-    // Init
-    window.addEventListener('DOMContentLoaded', async () => {
-      await loadFilterOptions(true);         // pobla una sola vez
-      document.getElementById('applyFilters').addEventListener('click', renderAll);
-      await renderAll();
-    });
+  // Init: pobla filtros una sola vez y render inicial
+  window.addEventListener('DOMContentLoaded', async () => {
+    await loadFilterOptions(true);           // carga opciones
+    document.getElementById('applyFilters')
+            .addEventListener('click', renderAll);  // aplica filtros solo al click
+    await renderAll();                       // render inicial
+  });
   </script>
 </body>
 </html>
