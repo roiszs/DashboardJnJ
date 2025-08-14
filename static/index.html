@@ -252,22 +252,61 @@
     }
 
     async function loadFilterOptions() {
-      const lines = await fetch('/api/eficiencias/lines', { headers: getAuthHeaders() }).then(r => r.json());
-      const lineSel = document.getElementById('filterLinea');
-      lines.forEach(l => {
-        const o = document.createElement('option');
-        o.value = l; o.textContent = l;
-        lineSel.appendChild(o);
-      });
+  const lineaSel  = document.getElementById('filterLinea');
+  const procesoSel = document.getElementById('filterProceso');
 
-      const procs = await fetch('/api/eficiencias/processes', { headers: getAuthHeaders() }).then(r => r.json());
-      const procSel = document.getElementById('filterProceso');
-      procs.forEach(p => {
-        const o = document.createElement('option');
-        o.value = p; o.textContent = p;
-        procSel.appendChild(o);
-      });
-    }
+  // limpia dejando solo la opción "todas"
+  lineaSel.innerHTML   = '<option value="">-- Todas --</option>';
+  procesoSel.innerHTML = '<option value="">-- Todos --</option>';
+
+  // auth
+  const headers = getAuthHeaders();
+
+  // 1) intentamos con endpoints dedicados
+  let lines = [];
+  let procs = [];
+  try {
+    const [r1, r2] = await Promise.all([
+      fetch('/api/eficiencias/lines', { headers }),
+      fetch('/api/eficiencias/processes', { headers })
+    ]);
+    if (r1.ok) lines = await r1.json();
+    if (r2.ok) procs = await r2.json();
+  } catch (_) {
+    // ignoramos, haremos fallback
+  }
+
+  // 2) fallback si vinieron vacíos
+  if (!Array.isArray(lines) || lines.length === 0 || !Array.isArray(procs) || procs.length === 0) {
+    try {
+      // trae un lote razonable de registros recientes
+      const r = await fetch('/api/eficiencias?limit=1000', { headers });
+      if (r.ok) {
+        const data = await r.json();
+        const setLineas   = new Set();
+        const setProcesos = new Set();
+        data.forEach(row => {
+          if (row.linea)   setLineas.add(row.linea);
+          if (row.proceso) setProcesos.add(row.proceso);
+        });
+        if (!lines || lines.length === 0)  lines = [...setLineas].sort();
+        if (!procs || procs.length === 0) procs = [...setProcesos].sort();
+      }
+    } catch (_) {}
+  }
+
+  // 3) puebla selects
+  (lines || []).forEach(l => {
+    const o = document.createElement('option');
+    o.value = l; o.textContent = l;
+    lineaSel.appendChild(o);
+  });
+  (procs || []).forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    procesoSel.appendChild(o);
+  });
+}
 
     // --------- Renders ----------
     async function renderKPIs() {
