@@ -631,39 +631,59 @@
       });
     }
 
-    async function renderDowntime() {
-      const res = await fetch('/api/eficiencias/weekly/downtime' + getFilterQS(), { headers: getAuthHeaders() });
-      if (!res.ok) return;
-      const raw = await res.json();
+   async function renderDowntime() {
+    const res = await fetch('/api/eficiencias/weekly/downtime' + getFilterQS(), {
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) return;
+    const raw = await res.json();
 
-      if (downtimeChartInstance) downtimeChartInstance.destroy();
-      if (!raw.length) return;
-
-      const semanas = [...new Set(raw.map(r => r.semana))].sort((a,b)=>a-b);
-      const lineas  = [...new Set(raw.map(r => r.linea))];
-
-      const datasets = lineas.map((linea, idx) => ({
-        label: linea,
-        data: semanas.map(sem => {
-          const rec = raw.find(r => r.semana === sem && r.linea === linea);
-          return rec ? Number(rec.avg_downtime.toFixed(1)) : 0;
-        }),
-        backgroundColor: PALETTE[idx % PALETTE.length],
-        borderColor:     PALETTE[idx % PALETTE.length],
-      }));
-
-      downtimeChartInstance = createChart('downtimeChart', {
-        type: 'bar',
-        data: { labels: semanas, datasets },
-        options: {
-          plugins: { legend: { position: 'top' } },
-          scales: {
-            x: { title: { display: true, text: 'Semana' } },
-            y: { beginAtZero: true, title: { display: true, text: 'Minutos perdidos' } }
-          }
-        }
-      });
+    if (downtimeChartInstance) downtimeChartInstance.destroy();
+    if (!raw.length) {
+      // Limpia el canvas si no hay datos
+      const ctx = document.getElementById('downtimeChart').getContext('2d');
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.font = '14px sans-serif';
+      ctx.fillText('Sin datos para el filtro actual', 20, 30);
+      return;
     }
+
+    const semanas = [...new Set(raw.map(r => r.semana))].sort((a, b) => a - b);
+    const lineas  = [...new Set(raw.map(r => r.linea))];
+
+    // Construye datasets en HORAS (minutos / 60, con 2 decimales)
+    const datasets = lineas.map((linea, idx) => ({
+      label: linea,
+      data: semanas.map(sem => {
+        const rec  = raw.find(r => r.semana === sem && r.linea === linea);
+        const mins = rec ? Number(rec.avg_downtime || 0) : 0;
+        return Number((mins / 60).toFixed(2)); // horas
+      }),
+      backgroundColor: PALETTE[idx % PALETTE.length],
+      borderColor:     PALETTE[idx % PALETTE.length],
+    }));
+
+    downtimeChartInstance = createChart('downtimeChart', {
+      type: 'bar',
+      data: { labels: semanas, datasets },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: (item) => `${item.dataset.label}: ${item.formattedValue} h`
+            }
+          }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Semana' } },
+          y: { beginAtZero: true, title: { display: true, text: 'Horas' } }
+        }
+      }
+    });
+  }
 
     // Borrar registro (solo admin)
     window.borrarRegistro = async function(id, btn) {
