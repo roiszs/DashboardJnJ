@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <title>Dashboard de Eficiencias</title>
 
-  <!-- Tailwind: define config ANTES del CDN -->
+  <!-- Redirección si no hay token -->
   <script>
     if (!localStorage.getItem('token')) {
       window.location.href = '/login.html';
     }
+    // Tailwind: configura ANTES del CDN
     window.tailwind = {
       config: {
         theme: {
@@ -32,7 +33,7 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Tu CSS opcional -->
+  <!-- CSS opcional -->
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="bg-jj-gray font-sans text-jj-dark min-h-screen">
@@ -219,7 +220,9 @@
         if (!res.ok) throw await res.text();
         const data = await res.json();
         msg.textContent = `✅ Insertados ${data.insertados} registros`;
-        renderAll();
+        // refresca opciones (por si aparecieron nuevas líneas/procesos) y re-renderiza
+        await loadFilterOptions(true);
+        await renderAll();
       } catch (err) {
         msg.textContent = '❌ Error: ' + err;
       }
@@ -251,62 +254,66 @@
       return qs ? '?' + qs : '';
     }
 
-    async function loadFilterOptions() {
-  const lineaSel  = document.getElementById('filterLinea');
-  const procesoSel = document.getElementById('filterProceso');
+    // Carga opciones 1 sola vez, y conserva selección si se llama de nuevo.
+    async function loadFilterOptions(force = false) {
+      const lineaSel  = document.getElementById('filterLinea');
+      const procesoSel = document.getElementById('filterProceso');
 
-  // limpia dejando solo la opción "todas"
-  lineaSel.innerHTML   = '<option value="">-- Todas --</option>';
-  procesoSel.innerHTML = '<option value="">-- Todos --</option>';
+      const prevLinea = lineaSel.value;
+      const prevProc  = procesoSel.value;
 
-  // auth
-  const headers = getAuthHeaders();
+      // Si no es force y ya hay más de la opción por defecto, no repoblar
+      if (!force && lineaSel.options.length > 1 && procesoSel.options.length > 1) return;
 
-  // 1) intentamos con endpoints dedicados
-  let lines = [];
-  let procs = [];
-  try {
-    const [r1, r2] = await Promise.all([
-      fetch('/api/eficiencias/lines', { headers }),
-      fetch('/api/eficiencias/processes', { headers })
-    ]);
-    if (r1.ok) lines = await r1.json();
-    if (r2.ok) procs = await r2.json();
-  } catch (_) {
-    // ignoramos, haremos fallback
-  }
+      lineaSel.innerHTML   = '<option value="">-- Todas --</option>';
+      procesoSel.innerHTML = '<option value="">-- Todos --</option>';
 
-  // 2) fallback si vinieron vacíos
-  if (!Array.isArray(lines) || lines.length === 0 || !Array.isArray(procs) || procs.length === 0) {
-    try {
-      // trae un lote razonable de registros recientes
-      const r = await fetch('/api/eficiencias?limit=1000', { headers });
-      if (r.ok) {
-        const data = await r.json();
-        const setLineas   = new Set();
-        const setProcesos = new Set();
-        data.forEach(row => {
-          if (row.linea)   setLineas.add(row.linea);
-          if (row.proceso) setProcesos.add(row.proceso);
-        });
-        if (!lines || lines.length === 0)  lines = [...setLineas].sort();
-        if (!procs || procs.length === 0) procs = [...setProcesos].sort();
+      const headers = getAuthHeaders();
+
+      let lines = [];
+      let procs = [];
+      try {
+        const [r1, r2] = await Promise.all([
+          fetch('/api/eficiencias/lines', { headers }),
+          fetch('/api/eficiencias/processes', { headers })
+        ]);
+        if (r1.ok) lines = await r1.json();
+        if (r2.ok) procs = await r2.json();
+      } catch (_) {}
+
+      // Fallback si vienen vacíos
+      if (!Array.isArray(lines) || !lines.length || !Array.isArray(procs) || !procs.length) {
+        try {
+          const r = await fetch('/api/eficiencias?limit=1000' + getFilterQS(), { headers });
+          if (r.ok) {
+            const data = await r.json();
+            const setLineas   = new Set();
+            const setProcesos = new Set();
+            data.forEach(row => {
+              if (row.linea)   setLineas.add(row.linea);
+              if (row.proceso) setProcesos.add(row.proceso);
+            });
+            if (!lines.length) lines = [...setLineas].sort();
+            if (!procs.length) procs = [...setProcesos].sort();
+          }
+        } catch (_) {}
       }
-    } catch (_) {}
-  }
 
-  // 3) puebla selects
-  (lines || []).forEach(l => {
-    const o = document.createElement('option');
-    o.value = l; o.textContent = l;
-    lineaSel.appendChild(o);
-  });
-  (procs || []).forEach(p => {
-    const o = document.createElement('option');
-    o.value = p; o.textContent = p;
-    procesoSel.appendChild(o);
-  });
-}
+      (lines || []).forEach(l => {
+        const o = document.createElement('option');
+        o.value = l; o.textContent = l;
+        lineaSel.appendChild(o);
+      });
+      (procs || []).forEach(p => {
+        const o = document.createElement('option');
+        o.value = p; o.textContent = p;
+        procesoSel.appendChild(o);
+      });
+
+      // Restaura selección si sigue disponible
+      if ([...lineaSel.options].some(o => o.value === prevLinea)) lineaSel.value = prevLinea;
+      if ([...procesoSel.options].some(o => o.value === prevProc)) procesoSel.value = prevProc;
+    }
 
     // --------- Renders ----------
     async function renderKPIs() {
@@ -661,13 +668,12 @@
         alert('No se pudo eliminar: ' + (await res.text()));
         return;
       }
-      // quita la fila de la tabla
       const tr = btn.closest('tr');
       tr?.parentNode?.removeChild(tr);
     };
 
+    // Render maestro: ¡NO repuebla filtros aquí!
     async function renderAll() {
-      await loadFilterOptions();
       await safeRender(renderDashboard);
       await safeRender(renderKPIs);
       await safeRender(renderWeekly);
@@ -679,10 +685,16 @@
       await safeRender(renderDowntime);
     }
 
+    // Listeners de filtros para aplicar automáticamente
+    ['filterStart','filterEnd','filterLinea','filterProceso'].forEach(id => {
+      document.getElementById(id).addEventListener('change', renderAll);
+    });
+
+    // Init
     window.addEventListener('DOMContentLoaded', async () => {
-      await loadFilterOptions();
+      await loadFilterOptions(true);         // pobla una sola vez
       document.getElementById('applyFilters').addEventListener('click', renderAll);
-      renderAll();
+      await renderAll();
     });
   </script>
 </body>
