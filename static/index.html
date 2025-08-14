@@ -1,1047 +1,649 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Dashboard de Eficiencias</title>
-  <!-- Chart.js desde CDN -->
+
+  <!-- Tailwind: define config ANTES del CDN -->
+  <script>
+    if (!localStorage.getItem('token')) {
+      window.location.href = '/login.html';
+    }
+    window.tailwind = {
+      config: {
+        theme: {
+          extend: {
+            colors: {
+              'jj-red':   '#E2231A',
+              'jj-gray':  '#F5F5F5',
+              'jj-dark':  '#333333',
+              'jj-light': '#FFFFFF'
+            },
+            fontFamily: {
+              sans: ['Source Sans Pro', 'ui-sans-serif', 'system-ui']
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Tu CSS opcional -->
   <link rel="stylesheet" href="/static/style.css">
-
 </head>
+<body class="bg-jj-gray font-sans text-jj-dark min-h-screen">
+  <div class="container mx-auto py-8 space-y-6">
+    <!-- Header con filtros y botón Salir -->
+    <header class="sticky top-0 z-20 bg-jj-light shadow-md rounded">
+      <div class="container mx-auto px-4 py-3">
+        <div class="flex flex-wrap items-end gap-4">
+          <h1 class="text-xl font-bold mr-4">Johnson &amp; Johnson – Dashboard S&amp;S</h1>
 
-<body>
-  <body class="bg-jj-gray font-sans text-jj-dark min-h-screen">
-    <div class="container mx-auto py-8">
+          <!-- Fecha Inicio -->
+          <div class="flex flex-col">
+            <label for="filterStart" class="text-sm font-medium text-jj-dark mb-1">Fecha Inicio</label>
+            <input id="filterStart" type="date"
+                   class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red"/>
+          </div>
 
-    <h1>Dashboard de Eficiencias</h1>
+          <!-- Fecha Fin -->
+          <div class="flex flex-col">
+            <label for="filterEnd" class="text-sm font-medium text-jj-dark mb-1">Fecha Fin</label>
+            <input id="filterEnd" type="date"
+                   class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red"/>
+          </div>
 
-    <!-- Filtros -->
-    
-<header class="sticky top-0 z-20 bg-jj-light shadow-md">
-  <div class="container mx-auto px-4 py-3">
-    <div class="flex flex-wrap items-end gap-4">
-      <!-- Fecha Inicio -->
-      <div class="flex flex-col">
-        <label for="filterStart" class="text-sm font-medium text-jj-dark mb-1">
-          Fecha Inicio
-        </label>
-        <input id="filterStart" type="date"
-               class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red"/>
+          <!-- Línea -->
+          <div class="flex flex-col">
+            <label for="filterLinea" class="text-sm font-medium text-jj-dark mb-1">Línea</label>
+            <select id="filterLinea"
+                    class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red">
+              <option value="">-- Todas --</option>
+            </select>
+          </div>
+
+          <!-- Proceso -->
+          <div class="flex flex-col">
+            <label for="filterProceso" class="text-sm font-medium text-jj-dark mb-1">Proceso</label>
+            <select id="filterProceso"
+                    class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red">
+              <option value="">-- Todos --</option>
+            </select>
+          </div>
+
+          <!-- Acciones -->
+          <div class="ml-auto flex items-center gap-3">
+            <button id="applyFilters"
+                    class="bg-red-600 text-white font-semibold rounded px-4 py-2 hover:bg-green-600 transition-colors duration-200">
+              Aplicar filtros
+            </button>
+
+            <button id="btn-logout"
+                    class="bg-gray-200 text-jj-dark font-semibold rounded px-4 py-2 hover:bg-gray-300 transition-colors duration-200">
+              Salir
+            </button>
+          </div>
+        </div>
       </div>
+    </header>
 
-      <!-- Fecha Fin -->
-      <div class="flex flex-col">
-        <label for="filterEnd" class="text-sm font-medium text-jj-dark mb-1">
-          Fecha Fin
-        </label>
-        <input id="filterEnd" type="date"
-               class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red"/>
+    <!-- KPIs -->
+    <section>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
+          <span class="text-sm text-gray-500">Total de Registros</span>
+          <span class="text-3xl font-bold" id="kpi-total-records">0</span>
+        </div>
+        <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
+          <span class="text-sm text-gray-500">Eficiencia Promedio</span>
+          <span class="text-3xl font-bold" id="kpi-average-efficiency">0%</span>
+        </div>
+        <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
+          <span class="text-sm text-gray-500">Mejor Línea</span>
+          <span class="text-3xl font-bold" id="kpi-best-line">—</span>
+        </div>
+        <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
+          <span class="text-sm text-gray-500">Tiempo Muerto Semanal</span>
+          <span class="text-3xl font-bold" id="kpi-downtime">0 min</span>
+        </div>
       </div>
+    </section>
 
-      <!-- Línea -->
-      <div class="flex flex-col">
-        <label for="filterLinea" class="text-sm font-medium text-jj-dark mb-1">
-          Línea
-        </label>
-        <select id="filterLinea"
-                class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red">
-          <option value="">-- Todas --</option>
-        </select>
-      </div>
-
-      <!-- Proceso -->
-      <div class="flex flex-col">
-        <label for="filterProceso" class="text-sm font-medium text-jj-dark mb-1">
-          Proceso
-        </label>
-        <select id="filterProceso"
-                class="border border-gray-300 rounded-md px-3 py-2 focus:ring-jj-red focus:border-jj-red">
-          <option value="">-- Todos --</option>
-        </select>
-      </div>
-
-      <!-- Botón Aplicar -->
-      <div class="ml-auto">
-        <button id="applyFilters"
+    <!-- Subir Excel -->
+    <section class="bg-jj-light p-4 rounded-lg shadow">
+      <form id="uploadForm" class="flex items-center gap-4" enctype="multipart/form-data">
+        <input id="fileInput" type="file" accept=".xls,.xlsx"
+               class="border border-gray-300 rounded px-3 py-2 bg-white" />
+        <button type="submit"
                 class="bg-red-600 text-white font-semibold rounded px-4 py-2 hover:bg-green-600 transition-colors duration-200">
-          Aplicar filtros
+          📂 Subir Excel
         </button>
-      </div>
-    </div>
-  </div>
-</header>
+        <span id="uploadMsg" class="text-sm"></span>
+      </form>
+    </section>
 
-    
-
-    <!-- Botón para agregar registro -->
-    <nav class="bg-jj-red text-jj-light p-4 rounded shadow-md mb-6">
-      <div class="container mx-auto flex items-center justify-between">
-        <h1 class="text-2xl font-bold">Johnson &amp; Johnson Dashboard S&S</h1>
-        <a href="/add.html"
-           class="bg-red-600 text-white font-semibold rounded px-4 py-2 hover:bg-green-600 transition-colors duration-200">
-          + Nuevo Registro
-        </a>
-      </div>
-    </nav>
-    
-    <!-- KPI Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
-        <span class="text-sm text-gray-500">Total de Registros</span>
-        <span class="text-3xl font-bold" id="kpi-total-records">0</span>
-      </div>
-      <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
-        <span class="text-sm text-gray-500">Eficiencia Promedio</span>
-        <span class="text-3xl font-bold" id="kpi-average-efficiency">0%</span>
-      </div>
-      <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
-        <span class="text-sm text-gray-500">Mejor Línea</span>
-        <span class="text-3xl font-bold" id="kpi-best-line">—</span>
-      </div>
-      <div class="bg-jj-light p-4 rounded-lg shadow flex flex-col items-center">
-        <span class="text-sm text-gray-500">Tiempo Muerto Semanal</span>
-        <span class="text-3xl font-bold" id="kpi-downtime">0 min</span>
-      </div>
-    </div>
-    
-    
-
-    <!-- Gráficas en grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <section class="bg-jj-light p-4 rounded-lg shadow">
+    <!-- Gráficas -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div class="bg-jj-light p-4 rounded-lg shadow">
         <h3 class="font-semibold mb-2">Eficiencia Semanal por Proceso</h3>
         <canvas id="weeklyChart" width="800" height="300"></canvas>
-      </section>
-      <section class="bg-jj-light p-4 rounded-lg shadow">
+      </div>
+      <div class="bg-jj-light p-4 rounded-lg shadow">
         <h3 class="font-semibold mb-2">Eficiencia Diaria por Proceso</h3>
         <canvas id="dailyProcessChart" width="800" height="300"></canvas>
-      </section>
-      <section class="bg-jj-light p-4 rounded-lg shadow">
+      </div>
+      <div class="bg-jj-light p-4 rounded-lg shadow">
         <h3 class="font-semibold mb-2">Eficiencia Diaria por Línea</h3>
         <canvas id="dailyLineChart" width="800" height="300"></canvas>
-      </section>
-      <section class="bg-jj-light p-4 rounded-lg shadow">
+      </div>
+      <div class="bg-jj-light p-4 rounded-lg shadow">
         <h3 class="font-semibold mb-2">Top 5 Peores Asociados</h3>
         <canvas id="topAssocChart" width="800" height="300"></canvas>
-      </section>
-      <section class="bg-jj-light p-4 rounded-lg shadow">
+      </div>
+      <div class="bg-jj-light p-4 rounded-lg shadow">
         <h3 class="font-semibold mb-2">Eficiencia Promedio por Turno</h3>
         <canvas id="shiftChart" width="800" height="300"></canvas>
-      </section>
-      <section class="bg-jj-light p-4 rounded-lg shadow">
+      </div>
+      <div class="bg-jj-light p-4 rounded-lg shadow">
         <h3 class="font-semibold mb-2">Conteo de SW vs WD por Línea</h3>
         <canvas id="countChart" width="800" height="300"></canvas>
-      </section>
-      <section class="bg-jj-light p-4 rounded-lg shadow">
+      </div>
+      <div class="bg-jj-light p-4 rounded-lg shadow">
         <h3 class="font-semibold mb-2">Tiempo Muerto Semanal por Línea</h3>
         <canvas id="downtimeChart" width="800" height="300"></canvas>
-      </section>
-    </div>
+      </div>
+    </section>
 
-
-    <!--Boton subir Excel-->
-    <form id="uploadForm" class="flex items-center gap-4 mb-6" enctype="multipart/form-data">
-      <input id="fileInput" type="file" accept=".xls,.xlsx"
-             class="border border-gray-300 rounded px-3 py-2 bg-white" />
-      <button type="submit" class="bg-red-600 text-white font-semibold rounded px-4 py-2 hover:bg-green-600 transition-colors duration-200">
-        📂 Subir Excel
-      </button>
-      <span id="uploadMsg" class="text-sm"></span>
-    </form>
-    
-    
-
-
-    <!-- Tabla de registros -->
-    <h2>Registros Recientes</h2>
-    <table id="efTable">
-      <thead>
-        <tr>
-          <th>Asociado</th>
-          <th>Línea</th>
-          <th>Supervisor</th>
-          <th>Tipo</th>
-          <th>Proceso</th>
-          <th>Efic. Asociado</th>
-          <th>Semana</th>
-          <th>Turno</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
+    <!-- Tabla -->
+    <section class="bg-jj-light p-4 rounded-lg shadow">
+      <h2 class="font-semibold mb-3">Registros Recientes</h2>
+      <div class="overflow-auto">
+        <table id="efTable" class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left border-b">
+              <th class="py-2 pr-3">Asociado</th>
+              <th class="py-2 pr-3">Línea</th>
+              <th class="py-2 pr-3">Supervisor</th>
+              <th class="py-2 pr-3">Tipo</th>
+              <th class="py-2 pr-3">Proceso</th>
+              <th class="py-2 pr-3">Efic. Asociado</th>
+              <th class="py-2 pr-3">Semana</th>
+              <th class="py-2 pr-3">Turno</th>
+              <th class="py-2 pr-3">Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
   </div>
-  <!-- Tailwind Play CDN + configuración de colores y tipografía -->
-<script>
-   if (!localStorage.getItem('token')) {
-    window.location.href = '/login.html';
-  }
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          'jj-red':   '#E2231A',
-          'jj-gray':  '#F5F5F5',
-          'jj-dark':  '#333333',
-          'jj-light': '#FFFFFF'
-        },
-        fontFamily: {
-          sans: ['Source Sans Pro', 'ui-sans-serif', 'system-ui']
+
+  <!-- ======= SCRIPTS ======= -->
+  <script>
+    const PALETTE = ['#2563eb', '#dc2626', '#f59e0b', '#10b981', '#7c3aed', '#0d9488', '#f43f5e', '#6366f1'];
+
+    function getAuthHeaders() {
+      const token = localStorage.getItem('token');
+      return { 'Authorization': `Bearer ${token}` };
+    }
+
+    // Logout
+    document.getElementById('btn-logout')?.addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('user_role');
+      window.location.href = '/login.html';
+    });
+
+    // --------- Subida Excel ----------
+    document.getElementById('uploadForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const file = document.getElementById('fileInput').files[0];
+      const msg  = document.getElementById('uploadMsg');
+      if (!file) {
+        msg.textContent = 'Selecciona un archivo primero';
+        return;
+      }
+      const fd = new FormData();
+      fd.append('file', file);
+      try {
+        const res = await fetch('/api/eficiencias/upload', {
+          method: 'POST',
+          headers: getAuthHeaders(), // solo auth; FormData pone boundary
+          body: fd
+        });
+        if (!res.ok) throw await res.text();
+        const data = await res.json();
+        msg.textContent = `✅ Insertados ${data.insertados} registros`;
+        renderAll();
+      } catch (err) {
+        msg.textContent = '❌ Error: ' + err;
+      }
+    });
+
+    // --------- Helpers ----------
+    function createChart(id, cfg) {
+      const canvas = document.getElementById(id);
+      const old = Chart.getChart(canvas);
+      if (old) old.destroy();
+      return new Chart(canvas, cfg);
+    }
+
+    async function safeRender(fn) {
+      try { await fn(); } catch (e) { console.error(`Error en ${fn.name}:`, e); }
+    }
+
+    function getFilterQS() {
+      const params = new URLSearchParams();
+      const s = document.getElementById('filterStart').value;
+      const e = document.getElementById('filterEnd').value;
+      const l = document.getElementById('filterLinea').value;
+      const p = document.getElementById('filterProceso').value;
+      if (s) params.append('start', s);
+      if (e) params.append('end',   e);
+      if (l) params.append('linea', l);
+      if (p) params.append('proceso', p);
+      const qs = params.toString();
+      return qs ? '?' + qs : '';
+    }
+
+    async function loadFilterOptions() {
+      const lines = await fetch('/api/eficiencias/lines', { headers: getAuthHeaders() }).then(r => r.json());
+      const lineSel = document.getElementById('filterLinea');
+      lines.forEach(l => {
+        const o = document.createElement('option');
+        o.value = l; o.textContent = l;
+        lineSel.appendChild(o);
+      });
+
+      const procs = await fetch('/api/eficiencias/processes', { headers: getAuthHeaders() }).then(r => r.json());
+      const procSel = document.getElementById('filterProceso');
+      procs.forEach(p => {
+        const o = document.createElement('option');
+        o.value = p; o.textContent = p;
+        procSel.appendChild(o);
+      });
+    }
+
+    // --------- Renders ----------
+    async function renderKPIs() {
+      const qs = getFilterQS();
+
+      const res = await fetch('/api/eficiencias' + qs, { headers: getAuthHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const total = data.length;
+      document.getElementById('kpi-total-records').textContent = total;
+
+      const sumEff = data.reduce((sum, r) => sum + (r.eficiencia_asociado ?? 0), 0);
+      const avgEff = total ? (sumEff / total).toFixed(1) + '%' : '0%';
+      document.getElementById('kpi-average-efficiency').textContent = avgEff;
+
+      const lineMap = {};
+      data.forEach(r => (lineMap[r.linea] ||= []).push(r.eficiencia_asociado || 0));
+      let bestLine = '—', bestAvg = -Infinity;
+      for (const [line, arr] of Object.entries(lineMap)) {
+        const avg = arr.reduce((a,b)=>a+b,0) / arr.length;
+        if (avg > bestAvg) { bestAvg = avg; bestLine = line; }
+      }
+      document.getElementById('kpi-best-line').textContent = bestLine;
+
+      const dtRes = await fetch('/api/eficiencias/weekly/downtime' + qs, { headers: getAuthHeaders() });
+      if (dtRes.ok) {
+        const dtData = await dtRes.json();
+        if (dtData.length) {
+          const maxSemana = Math.max(...dtData.map(r => r.semana));
+          const recs = dtData.filter(r => r.semana === maxSemana);
+          const avgDow = recs.reduce((s,r)=>s+r.avg_downtime,0) / recs.length;
+          document.getElementById('kpi-downtime').textContent = `${avgDow.toFixed(1)} min`;
+        } else {
+          document.getElementById('kpi-downtime').textContent = '0 min';
         }
       }
     }
-  }
-</script>
-<script src="https://cdn.tailwindcss.com"></script>
 
-  <script>
+    async function renderDashboard() {
+      const res = await fetch('/api/eficiencias' + getFilterQS(), { headers: getAuthHeaders() });
+      if (!res.ok) { console.error('Error eficiencias:', await res.text()); return; }
+      const data = await res.json();
 
-//Programacion del boton para subir excel
-document.getElementById('uploadForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const file = document.getElementById('fileInput').files[0];
-  if (!file) {
-    document.getElementById('uploadMsg').textContent = 'Selecciona un archivo primero';
-    return;
-  }
-  const fd = new FormData();
-  fd.append('file', file);
-  //Token de storage
-  const token = localStorage.getItem('token');
+      const tbody = document.querySelector('#efTable tbody');
+      tbody.innerHTML = '';
+      data.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b';
+        tr.innerHTML = `
+          <td class="py-2 pr-3">${r.nombre_asociado}</td>
+          <td class="py-2 pr-3">${r.linea}</td>
+          <td class="py-2 pr-3">${r.supervisor}</td>
+          <td class="py-2 pr-3">${r.tipo_proceso}</td>
+          <td class="py-2 pr-3">${r.proceso}</td>
+          <td class="py-2 pr-3">${Number(r.eficiencia_asociado).toFixed(1)}%</td>
+          <td class="py-2 pr-3">${r.semana}</td>
+          <td class="py-2 pr-3">${r.turno}</td>
+          <td class="py-2 pr-3">
+            <button class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
+                    onclick="borrarRegistro(${r.id}, this)">🗑️</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
-  try {
-    const res = await fetch('/api/eficiencias/upload', {
-      method: 'POST',
-      headers: {
-        // Único header que necesitamos
-        'Authorization': `Bearer ${token}`
-      },
-      body: fd
-    });
-    if (!res.ok) throw await res.text();
-    const data = await res.json();
-    document.getElementById('uploadMsg').textContent = `✅ Insertados ${data.insertados} registros`;
-    // refresca todo
-    renderAll();
-  } catch (err) {
-    document.getElementById('uploadMsg').textContent = '❌ Error: ' + err;
-  }
-});
+    let weeklyChartInstance, dailyProcessChartInstance, dailyLineChartInstance, topAssocChartInstance, shiftChartInstance, countChartInstance, downtimeChartInstance;
 
+    async function renderWeekly() {
+      const res = await fetch('/api/eficiencias/weekly' + getFilterQS(), { headers: getAuthHeaders() });
+      if (!res.ok) return;
+      const raw = await res.json();
 
-    // Helpers idénticos a los que te compartí…
-    async function safeRender(fn){ try{await fn()}catch(e){console.error(fn.name,e)} }
-    function getFilterQS(){ /*…igual…*/ }
-    async function loadFilterOptions(){ /*…igual…*/ }
-  
-    // renderDashboard() —con tbody.innerHTML=''—
-    async function renderDashboard(){ /*…igual…*/ }
-  
-    async function renderWeekly(){ /*…igual…*/ }
-    async function renderKPIs(){/*…igual…*/ }
-    async function renderDailyProcess(){ /*…igual…*/ }
-    async function renderDailyLine(){ /*…igual…*/ }
-    async function renderWorstAssociates(){ /*…igual…*/ }
-    async function renderShift(){ /*…igual…*/ }
-    async function renderCounts(){ /*…igual…*/ }
-    async function renderDowntime(){ /*…igual…*/ }
-  
-    async function renderAll(){
+      if (!raw.length) {
+        if (weeklyChartInstance) weeklyChartInstance.destroy();
+        const ctx = document.getElementById('weeklyChart').getContext('2d');
+        ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+        ctx.font = '14px sans-serif'; ctx.fillText('Sin datos para el filtro actual', 20, 30);
+        return;
+      }
+
+      const procStats = {};
+      raw.forEach(r => (procStats[r.proceso] ||= []).push(r.promedio_asociado));
+      const ranked = Object.entries(procStats)
+        .map(([p, arr]) => [p, arr.reduce((a,b)=>a+b,0)/arr.length])
+        .sort((a,b)=>b[1]-a[1]);
+
+      const TOP_N = 8;
+      const topProcesos = ranked.slice(0, TOP_N).map(([p]) => p);
+      const otherProcesos = ranked.slice(TOP_N).map(([p]) => p);
+      const semanas = [...new Set(raw.map(r => r.semana))].sort((a,b)=>a-b);
+
+      const datasets = topProcesos.map((proc, idx) => ({
+        label: proc,
+        data: semanas.map(sem => {
+          const rec = raw.find(r => r.semana === sem && r.proceso === proc);
+          return rec ? Number(rec.promedio_asociado.toFixed(1)) : 0;
+        }),
+        backgroundColor: PALETTE[idx % PALETTE.length],
+        borderRadius: 4
+      }));
+
+      if (otherProcesos.length) {
+        datasets.push({
+          label: 'Otros',
+          data: semanas.map(sem => {
+            const subset = raw.filter(r => r.semana === sem && otherProcesos.includes(r.proceso));
+            if (!subset.length) return 0;
+            const avg = subset.reduce((s,r)=>s+r.promedio_asociado,0)/subset.length;
+            return Number(avg.toFixed(1));
+          }),
+          backgroundColor: '#9ca3af',
+          borderRadius: 4
+        });
+      }
+
+      weeklyChartInstance = createChart('weeklyChart', {
+        type: 'bar',
+        data: { labels: semanas, datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'top' } },
+          scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: 'Eficiencia (%)' } } }
+        }
+      });
+    }
+
+    async function renderDailyProcess() {
+      const res = await fetch('/api/eficiencias/daily/process' + getFilterQS(), { headers: getAuthHeaders() });
+      if (!res.ok) return;
+      const raw = await res.json();
+
+      if (!raw.length) {
+        if (dailyProcessChartInstance) dailyProcessChartInstance.destroy();
+        const ctx = document.getElementById('dailyProcessChart').getContext('2d');
+        ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+        ctx.font = '14px sans-serif'; ctx.fillText('Sin datos para el filtro actual', 20, 30);
+        return;
+      }
+
+      const procStats = {};
+      raw.forEach(r => (procStats[r.proceso] ||= []).push(r.promedio_asociado));
+      const ranked = Object.entries(procStats)
+        .map(([p, arr]) => [p, arr.reduce((a,b)=>a+b,0)/arr.length])
+        .sort((a,b)=>b[1]-a[1]);
+
+      const TOP_N = 8;
+      const topProcesos = ranked.slice(0, TOP_N).map(([p]) => p);
+      const others = ranked.slice(TOP_N).map(([p]) => p);
+
+      const fechas = [...new Set(raw.map(r => r.fecha))].sort();
+
+      const datasets = topProcesos.map((proc, idx) => ({
+        label: proc,
+        data: fechas.map(f => {
+          const rec = raw.find(r => r.fecha === f && r.proceso === proc);
+          return rec ? Number(rec.promedio_asociado.toFixed(1)) : 0;
+        }),
+        backgroundColor: PALETTE[idx % PALETTE.length],
+        borderRadius: 4
+      }));
+
+      if (others.length) {
+        datasets.push({
+          label: 'Otros',
+          data: fechas.map(f => {
+            const subset = raw.filter(r => r.fecha === f && others.includes(r.proceso));
+            if (!subset.length) return 0;
+            const avg = subset.reduce((s,r)=>s+r.promedio_asociado,0)/subset.length;
+            return Number(avg.toFixed(1));
+          }),
+          backgroundColor: '#9ca3af',
+          borderRadius: 4
+        });
+      }
+
+      dailyProcessChartInstance = createChart('dailyProcessChart', {
+        type: 'bar',
+        data: { labels: fechas, datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'top' } },
+          scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: 'Eficiencia (%)' } } }
+        }
+      });
+    }
+
+    async function renderDailyLine() {
+      const res = await fetch('/api/eficiencias/daily/line' + getFilterQS(), { headers: getAuthHeaders() });
+      if (!res.ok) return;
+      const raw = await res.json();
+
+      if (dailyLineChartInstance) dailyLineChartInstance.destroy();
+      if (!raw.length) {
+        const ctx = document.getElementById('dailyLineChart').getContext('2d');
+        ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+        ctx.font = '14px sans-serif'; ctx.fillText('Sin datos para el filtro actual', 20, 30);
+        return;
+      }
+
+      const fechas  = [...new Set(raw.map(r => r.fecha))].sort();
+      const lineas  = [...new Set(raw.map(r => r.linea))];
+
+      const datasets = lineas.map((linea, idx) => ({
+        label: linea,
+        data: fechas.map(f => {
+          const rec = raw.find(r => r.fecha === f && r.linea === linea);
+          return rec ? Number(rec.promedio_asociado.toFixed(1)) : 0;
+        }),
+        backgroundColor: PALETTE[idx % PALETTE.length],
+        borderColor:     PALETTE[idx % PALETTE.length],
+        fill: false,
+        tension: 0.3,
+        pointRadius: 3
+      }));
+
+      dailyLineChartInstance = createChart('dailyLineChart', {
+        type: 'bar',
+        data: { labels: fechas, datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'top' } },
+          scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: 'Eficiencia (%)' } } }
+        }
+      });
+    }
+
+    async function renderTopAssociates() {
+      const qs = getFilterQS();
+      const sep = qs ? '&' : '?';
+      const res = await fetch('/api/eficiencias/top-associates' + qs + sep + 'limit=5', { headers: getAuthHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const labels  = data.map(r => r.nombre);
+      const valores = data.map(r => r.promedio_asociado);
+
+      topAssocChartInstance = createChart('topAssocChart', {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ label: 'Eficiencia Asociado (%)', data: valores, backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]) }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } },
+            x: { ticks: { autoSkip: false } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    async function renderShift() {
+      const res = await fetch('/api/eficiencias/shift' + getFilterQS(), { headers: getAuthHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const labels  = data.map(r => r.turno);
+      const valores = data.map(r => r.promedio_asociado);
+
+      shiftChartInstance = createChart('shiftChart', {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ label: 'Eficiencia (%)', data: valores, backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]) }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } },
+            x: { title: { display: true, text: 'Turno' } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    async function renderCounts() {
+      const res = await fetch('/api/eficiencias/counts' + getFilterQS(), { headers: getAuthHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const lineas   = [...new Set(data.map(r => r.linea))];
+      const swCounts = lineas.map(l => data.find(r => r.linea === l && r.tipo_proceso === 'SW')?.total_piezas || 0);
+      const wdCounts = lineas.map(l => data.find(r => r.linea === l && r.tipo_proceso === 'WD')?.total_piezas || 0);
+
+      countChartInstance = createChart('countChart', {
+        type: 'bar',
+        data: {
+          labels: lineas,
+          datasets: [
+            { label: 'SW (piezas)', data: swCounts, backgroundColor: PALETTE[0] },
+            { label: 'WD (piezas)', data: wdCounts, backgroundColor: PALETTE[1] }
+          ]
+        },
+        options: {
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            x: { title: { display: true, text: 'Línea' } },
+            y: { beginAtZero: true, title: { display: true, text: 'Piezas' } }
+          }
+        }
+      });
+    }
+
+    async function renderDowntime() {
+      const res = await fetch('/api/eficiencias/weekly/downtime' + getFilterQS(), { headers: getAuthHeaders() });
+      if (!res.ok) return;
+      const raw = await res.json();
+
+      if (downtimeChartInstance) downtimeChartInstance.destroy();
+      if (!raw.length) return;
+
+      const semanas = [...new Set(raw.map(r => r.semana))].sort((a,b)=>a-b);
+      const lineas  = [...new Set(raw.map(r => r.linea))];
+
+      const datasets = lineas.map((linea, idx) => ({
+        label: linea,
+        data: semanas.map(sem => {
+          const rec = raw.find(r => r.semana === sem && r.linea === linea);
+          return rec ? Number(rec.avg_downtime.toFixed(1)) : 0;
+        }),
+        backgroundColor: PALETTE[idx % PALETTE.length],
+        borderColor:     PALETTE[idx % PALETTE.length],
+      }));
+
+      downtimeChartInstance = createChart('downtimeChart', {
+        type: 'bar',
+        data: { labels: semanas, datasets },
+        options: {
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            x: { title: { display: true, text: 'Semana' } },
+            y: { beginAtZero: true, title: { display: true, text: 'Minutos perdidos' } }
+          }
+        }
+      });
+    }
+
+    // Borrar registro (solo admin)
+    window.borrarRegistro = async function(id, btn) {
+      if (!confirm('¿Eliminar registro #' + id + '?')) return;
+      const res = await fetch('/api/eficiencias/' + id, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) {
+        alert('No se pudo eliminar: ' + (await res.text()));
+        return;
+      }
+      // quita la fila de la tabla
+      const tr = btn.closest('tr');
+      tr?.parentNode?.removeChild(tr);
+    };
+
+    async function renderAll() {
       await safeRender(renderDashboard);
-      await safeRender(renderKPIs); 
+      await safeRender(renderKPIs);
       await safeRender(renderWeekly);
       await safeRender(renderDailyProcess);
       await safeRender(renderDailyLine);
-      await safeRender(renderWorstAssociates);
+      await safeRender(renderTopAssociates);
       await safeRender(renderShift);
       await safeRender(renderCounts);
       await safeRender(renderDowntime);
     }
-  
-    window.addEventListener('DOMContentLoaded', async()=>{
+
+    window.addEventListener('DOMContentLoaded', async () => {
       await loadFilterOptions();
-      document.getElementById('applyFilters')
-              .addEventListener('click', renderAll);
+      document.getElementById('applyFilters').addEventListener('click', renderAll);
       renderAll();
     });
   </script>
-  
 </body>
-
-
-<script>
-   if (!localStorage.getItem('token')) {
-    window.location.href = '/login.html';
-  }
-  const PALETTE = [
-  '#2563eb', '#dc2626', '#f59e0b', '#10b981',
-  '#7c3aed', '#0d9488', '#f43f5e', '#6366f1'
-];
-
-function getAuthHeaders() {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  };
-} 
-  // Destruye un Chart.js existente en el canvas antes de crear uno nuevo
-  function createChart(id, cfg) {
-    const canvas = document.getElementById(id);
-    const old = Chart.getChart(canvas);
-    if (old) old.destroy();
-    return new Chart(canvas, cfg);
-  }
-
-  // Envuelve cada render para que un fallo no detenga el resto
-  async function safeRender(fn) {
-    try {
-      await fn();
-    } catch (e) {
-      console.error(`Error en ${fn.name}:`, e);
-    }
-  }
-
-  // Construye la query string con los filtros seleccionados
-  function getFilterQS() {
-    const params = new URLSearchParams();
-    const s = document.getElementById('filterStart').value;
-    const e = document.getElementById('filterEnd').value;
-    const l = document.getElementById('filterLinea').value;
-    const p = document.getElementById('filterProceso').value;
-    if (s) params.append('start', s);
-    if (e) params.append('end',   e);
-    if (l) params.append('linea', l);
-    if (p) params.append('proceso', p);
-    const qs = params.toString();
-    return qs ? '?' + qs : '';
-  }
-
-  // Carga una sola vez las opciones de filtro (líneas y procesos)
-  async function loadFilterOptions() {
-    const lines = await fetch('/api/eficiencias/lines', { headers: getAuthHeaders() })
-                    .then(r => r.json());
-    const lineSel = document.getElementById('filterLinea');
-    lines.forEach(l => {
-      const o = document.createElement('option');
-      o.value = l; o.textContent = l;
-      lineSel.appendChild(o);
-    });
-
-    const procs = await fetch('/api/eficiencias/processes', { headers: getAuthHeaders() })
-                    .then(r => r.json());
-    const procSel = document.getElementById('filterProceso');
-    procs.forEach(p => {
-      const o = document.createElement('option');
-      o.value = p; o.textContent = p;
-      procSel.appendChild(o);
-    });
-  }
-
-
-  // ============
-  // RENDERS
-  // ============
-async function renderKPIs() {
-  const qs = getFilterQS();
-
-  // 1) Registros y eficiencia
-  const data = await fetch('/api/eficiencias' + qs).then(r => r.json());
-  const total = data.length;
-  document.getElementById('kpi-total-records').textContent = total;
-
-  const sumEff = data.reduce((sum, r) => sum + r.eficiencia_asociado, 0);
-  const avgEff = total
-    ? (sumEff / total).toFixed(1) + '%'
-    : '0%';
-  document.getElementById('kpi-average-efficiency').textContent = avgEff;
-
-  // 2) Mejor línea (la que tenga mayor eficiencia promedio)
-  const lineMap = {};
-  data.forEach(r => {
-    (lineMap[r.linea] ||= []).push(r.eficiencia_asociado);
-  });
-  let bestLine = '—', bestAvg = -Infinity;
-  for (const [line, arr] of Object.entries(lineMap)) {
-    const avg = arr.reduce((a,b)=>a+b,0) / arr.length;
-    if (avg > bestAvg) {
-      bestAvg = avg;
-      bestLine = line;
-    }
-  }
-  document.getElementById('kpi-best-line').textContent = bestLine;
-
-  // 3) Downtime semanal (promedio de la semana más reciente)
-  const dtData = await fetch('/api/eficiencias/weekly/downtime' + qs)
-                        .then(r => r.json());
-  if (dtData.length) {
-    // encuentra la semana máxima
-    const maxSemana = Math.max(...dtData.map(r => r.semana));
-    const recs = dtData.filter(r => r.semana === maxSemana);
-    const avgDow = recs.reduce((sum,r)=>sum+r.avg_downtime,0) / recs.length;
-    document.getElementById('kpi-downtime').textContent =
-      `${avgDow.toFixed(1)} min`;
-  } else {
-    document.getElementById('kpi-downtime').textContent = '0 min';
-  }
-}
-
-  async function renderDashboard() {
-  // 1) Lanza la petición con Authorization
-  const res = await fetch(
-    '/api/eficiencias' + getFilterQS(),
-    { headers: getAuthHeaders() }
-  );
-  if (!res.ok) {
-    console.error('Error al cargar eficiencias:', await res.text());
-    return;
-  }
-  const data = await res.json();
-
-  // 2) Pinta la tabla
-  const tbody = document.querySelector('#efTable tbody');
-  tbody.innerHTML = '';
-  data.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${r.nombre_asociado}</td>
-      <td>${r.linea}</td>
-      <td>${r.supervisor}</td>
-      <td>${r.tipo_proceso}</td>
-      <td>${r.proceso}</td>
-      <td>${r.eficiencia_asociado.toFixed(1)}%</td>
-      <td>${r.semana}</td>
-      <td>${r.turno}</td>
-      <td><button onclick="borrarRegistro(${r.id}, this)">🗑️</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  // 3) Cálculo de promedio por línea
-  const grouped = {};
-  data.forEach(r => {
-    if (!grouped[r.linea]) grouped[r.linea] = [];
-    grouped[r.linea].push(r.eficiencia_asociado);
-  });
-  const labels = Object.keys(grouped);
-  const avg    = labels.map(
-    l => grouped[l].reduce((a,b)=>a+b,0) / grouped[l].length
-  );
-
-  // 4) Dibujar el chart usando tu helper createChart
-  createChart('eficienciaChart', {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Eficiencia Prom. Línea (%)',
-        data: avg
-      }]
-    },
-    options: {
-      scales: { y: { beginAtZero: true, max: 100 } }
-    }
-  });
-}
-
-
-async function renderWeekly() {
-  const qs  = getFilterQS();
-  const url = '/api/eficiencias/weekly' + qs;
-
-  // 1) Fetch con Authorization
-  const res = await fetch(url, {
-    headers: getAuthHeaders()
-  });
-  if (!res.ok) {
-    console.error('Error al cargar eficiencia semanal:', await res.text());
-    return;
-  }
-  const raw = await res.json();
-
-  // 2) Si no hay datos, pinta mensaje
-  if (!raw.length) {
-    if (weeklyChartInstance) weeklyChartInstance.destroy();
-    const ctx = document.getElementById('weeklyChart').getContext('2d');
-    ctx.font = '14px sans-serif';
-    ctx.fillText('Sin datos para el filtro actual', 20, 30);
-    return;
-  }
-
-  // 3) Resto de tu lógica sin cambios …
-  const procStats = {};
-  raw.forEach(r => {
-    (procStats[r.proceso] ||= []).push(r.promedio_asociado);
-  });
-  const ranked = Object.entries(procStats)
-    .map(([proceso, arr]) => [proceso, arr.reduce((a,b)=>a+b,0)/arr.length])
-    .sort((a,b) => b[1] - a[1]);
-
-  const TOP_N = 8;
-  const topProcesos   = ranked.slice(0, TOP_N).map(([p]) => p);
-  const otherProcesos = ranked.slice(TOP_N).map(([p]) => p);
-  const useOthers     = otherProcesos.length > 0;
-  const semanas = [...new Set(raw.map(r => r.semana))].sort((a,b)=>a-b);
-
-  const datasets = topProcesos.map((proc, idx) => ({
-    label: proc,
-    data: semanas.map(sem => {
-      const rec = raw.find(r => r.semana === sem && r.proceso === proc);
-      return rec ? Number(rec.promedio_asociado.toFixed(1)) : 0;
-    }),
-    backgroundColor: PALETTE[idx % PALETTE.length],
-    borderRadius: 4
-  }));
-
-  if (useOthers) {
-    datasets.push({
-      label: 'Otros',
-      data: semanas.map(sem => {
-        const subset = raw.filter(r => r.semana === sem && otherProcesos.includes(r.proceso));
-        if (!subset.length) return 0;
-        const avg = subset.reduce((s,r)=>s+r.promedio_asociado,0)/subset.length;
-        return Number(avg.toFixed(1));
-      }),
-      backgroundColor: '#9ca3af',
-      borderRadius: 4
-    });
-  }
-
-  if (weeklyChartInstance) weeklyChartInstance.destroy();
-
-  weeklyChartInstance = new Chart(
-    document.getElementById('weeklyChart'),
-    {
-      type: 'bar',
-      data: { labels: semanas, datasets },
-      options: {
-        responsive: true,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { position: 'top' },
-          tooltip: {
-            callbacks: {
-              title: items => 'Semana ' + items[0].label,
-              label: item => `${item.dataset.label}: ${item.formattedValue}%`
-            }
-          }
-        },
-        scales: {
-          x: { title: { display: true, text: 'Semana' }, stacked: false },
-          y: { beginAtZero: true, max: 100, title: { display: true, text: 'Eficiencia (%)' } }
-        }
-      }
-    }
-  );
-}
-
-
-
-let dailyProcessChartInstance;
-
-async function renderDailyProcess() {
-  const qs  = getFilterQS();
-  const url = '/api/eficiencias/daily/process' + qs;
-
-  // 1) Petición con autenticación
-  const res = await fetch(url, {
-    headers: getAuthHeaders()
-  });
-  if (!res.ok) {
-    console.error('Error al cargar eficiencia diaria por proceso:', await res.text());
-    return;
-  }
-  const raw = await res.json();
-
-  // 2) Si no hay datos, mostramos mensaje
-  if (!raw.length) {
-    if (dailyProcessChartInstance) dailyProcessChartInstance.destroy();
-    const ctx = document.getElementById('dailyProcessChart').getContext('2d');
-    ctx.font = '14px sans-serif';
-    ctx.fillText('Sin datos para el filtro actual', 20, 30);
-    return;
-  }
-
-  // 3) Ranking de procesos
-  const procStats = {};
-  raw.forEach(r => {
-    (procStats[r.proceso] ||= []).push(r.promedio_asociado);
-  });
-  const ranked = Object.entries(procStats)
-    .map(([p, arr]) => [p, arr.reduce((a,b)=>a+b,0)/arr.length])
-    .sort((a,b) => b[1] - a[1]);
-
-  const TOP_N = 8;
-  const topProcesos = ranked.slice(0, TOP_N).map(([p]) => p);
-  const others      = ranked.slice(TOP_N).map(([p]) => p);
-
-  // 4) Fechas ordenadas
-  const fechas = [...new Set(raw.map(r => r.fecha))].sort();
-
-  // 5) Construcción de datasets
-  const datasets = topProcesos.map((proc, idx) => ({
-    label: proc,
-    data: fechas.map(f => {
-      const rec = raw.find(r => r.fecha === f && r.proceso === proc);
-      return rec ? Number(rec.promedio_asociado.toFixed(1)) : 0;
-    }),
-    backgroundColor: PALETTE[idx % PALETTE.length],
-    borderRadius: 4
-  }));
-
-  if (others.length) {
-    datasets.push({
-      label: 'Otros',
-      data: fechas.map(f => {
-        const subset = raw.filter(r => r.fecha === f && others.includes(r.proceso));
-        if (!subset.length) return 0;
-        const avg = subset.reduce((s,r)=>s+r.promedio_asociado,0)/subset.length;
-        return Number(avg.toFixed(1));
-      }),
-      backgroundColor: '#9ca3af',
-      borderRadius: 4
-    });
-  }
-
-  // 6) Destruir instancia previa y dibujar nueva
-  if (dailyProcessChartInstance) dailyProcessChartInstance.destroy();
-
-  dailyProcessChartInstance = new Chart(
-    document.getElementById('dailyProcessChart'),
-    {
-      type: 'bar',
-      data: { labels: fechas, datasets },
-      options: {
-        responsive: true,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { position: 'top' },
-          tooltip: {
-            callbacks: {
-              title: items => items[0].label,
-              label: item => `${item.dataset.label}: ${item.formattedValue}%`
-            }
-          }
-        },
-        scales: {
-          x: { title: { display: true, text: 'Fecha' }, stacked: false },
-          y: { beginAtZero: true, max: 100, title: { display: true, text: 'Eficiencia (%)' } }
-        }
-      }
-    }
-  );
-}
-
-let dailyLineChartInstance;
-
-async function renderDailyLine() {
-  const qs  = getFilterQS();
-  const url = '/api/eficiencias/daily/line' + qs;
-
-  // 1) Lanza la petición con Authorization
-  const res = await fetch(url, {
-    headers: getAuthHeaders()
-  });
-  if (!res.ok) {
-    console.error('Error al cargar eficiencia diaria por línea:', await res.text());
-    return;
-  }
-  const raw = await res.json();
-
-  // 2) Destruye instancia anterior si existe
-  if (dailyLineChartInstance) dailyLineChartInstance.destroy();
-
-  // 3) Si no hay datos, muestra mensaje y corta
-  if (!raw.length) {
-    const ctx = document.getElementById('dailyLineChart').getContext('2d');
-    ctx.font = '14px sans-serif';
-    ctx.fillText('Sin datos para el filtro actual', 20, 30);
-    return;
-  }
-
-  // 4) Prepara labels y datasets
-  const fechas  = [...new Set(raw.map(r => r.fecha))].sort();
-  const lineas  = [...new Set(raw.map(r => r.linea))];
-
-  const datasets = lineas.map((linea, idx) => ({
-    label: linea,
-    data: fechas.map(f => {
-      const rec = raw.find(r => r.fecha === f && r.linea === linea);
-      return rec ? Number(rec.promedio_asociado.toFixed(1)) : 0;
-    }),
-    borderColor:    PALETTE[idx % PALETTE.length],
-    backgroundColor: PALETTE[idx % PALETTE.length],
-    fill: false,
-    tension: 0.3,
-    pointRadius: 4
-  }));
-
-  // 5) Crea el gráfico (tipo barra o línea según prefieras)
-  dailyLineChartInstance = new Chart(
-    document.getElementById('dailyLineChart'),
-    {
-      type: 'bar',  // cámbialo a 'line' si prefieres líneas
-      data: { labels: fechas, datasets },
-      options: {
-        responsive: true,
-        interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { position: 'top' } },
-        scales: {
-          x: { title: { display: true, text: 'Fecha' } },
-          y: {
-            beginAtZero: true,
-            max: 100,
-            title: { display: true, text: 'Eficiencia (%)' }
-          }
-        }
-      }
-    }
-  );
-}
-
-
-
-  //async function renderWorstAssociates() {
-  //  const data = await (await fetch('/api/eficiencias/top-associates?limit=5' + getFilterQS())).json();
-  //  const labels = data.map(r=>r.nombre);
-  //  const valores= data.map(r=>r.promedio_asociado);
-   // createChart('topAssocChart', {
-     // type:'bar',
-   //   data:{ labels, datasets:[{ label:'Eficiencia Asociado (%)', data: valores }] },
-     // options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
-   // });
-  //}
-
-  let topAssocChartInstance;
-
-async function renderTopAssociates() {
-  // 1) Construye la QS de filtros
-  const qs  = getFilterQS();                // ej. "?start=2025-07-14&end=2025-07-18&linea=L28"
-  const sep = qs ? '&' : '?';               // si qs existe, usamos '&', si no '?'
-  const url = `/api/eficiencias/top-associates${qs}${sep}limit=5`;
-
-  // 2) Lanza la petición con autenticación
-  const res = await fetch(url, {
-    headers: getAuthHeaders()
-  });
-  if (!res.ok) {
-    console.error('Error al cargar top de asociados:', await res.text());
-    return;
-  }
-  const data = await res.json();
-
-  // 3) Destruye el chart anterior si existe
-  if (topAssocChartInstance) topAssocChartInstance.destroy();
-
-  // 4) Prepara labels y valores
-  const labels  = data.map(r => r.nombre);
-  const valores = data.map(r => r.promedio_asociado);
-
-  // 5) Dibuja en barras usando tu PALETTE global
-  topAssocChartInstance = new Chart(
-    document.getElementById('topAssocChart'),
-    {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Eficiencia Asociado (%)',
-          data: valores,
-          backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length])
-        }]
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } },
-          x: { ticks: { autoSkip: false } }
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: item => `${item.dataset.label}: ${item.formattedValue}%`
-            }
-          }
-        }
-      }
-    }
-  );
-}
-
-
-
-let shiftChartInstance;
-
-async function renderShift() {
-  const qs  = getFilterQS();
-  const url = '/api/eficiencias/shift' + qs;
-
-  // 1) Petición autenticada
-  const res = await fetch(url, {
-    headers: getAuthHeaders()
-  });
-  if (!res.ok) {
-    console.error('Error al cargar eficiencia por turno:', await res.text());
-    return;
-  }
-  const data = await res.json();
-
-  // 2) Destruye la instancia previa si existe
-  if (shiftChartInstance) shiftChartInstance.destroy();
-
-  // 3) Prepara etiquetas y valores
-  const labels  = data.map(r => r.turno);
-  const valores = data.map(r => r.promedio_asociado);
-
-  // 4) Dibuja el chart
-  shiftChartInstance = new Chart(
-    document.getElementById('shiftChart'),
-    {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Eficiencia (%)',
-          data: valores,
-          backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length])
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } },
-          x: { title: { display: true, text: 'Turno' } }
-        },
-        plugins: { legend: { display: false } }
-      }
-    }
-  );
-}
-
-let countChartInstance;
-
-async function renderCounts() {
-  const qs  = getFilterQS();
-  const url = '/api/eficiencias/counts' + qs;
-
-  // 1) Petición autenticada
-  const res = await fetch(url, {
-    headers: getAuthHeaders()
-  });
-  if (!res.ok) {
-    console.error('Error al cargar conteos SW/WD:', await res.text());
-    return;
-  }
-  const data = await res.json();
-
-  // 2) Destruye la instancia previa si existe
-  if (countChartInstance) countChartInstance.destroy();
-
-  // 3) Prepara labels y valores
-  const lineas   = [...new Set(data.map(r => r.linea))];
-  const swCounts = lineas.map(l =>
-    data.find(r => r.linea === l && r.tipo_proceso === 'SW')?.total_piezas || 0
-  );
-  const wdCounts = lineas.map(l =>
-    data.find(r => r.linea === l && r.tipo_proceso === 'WD')?.total_piezas || 0
-  );
-
-  // 4) Dibuja el chart
-  countChartInstance = new Chart(
-    document.getElementById('countChart'),
-    {
-      type: 'bar',
-      data: {
-        labels: lineas,
-        datasets: [
-          {
-            label: 'SW (piezas)',
-            data: swCounts,
-            backgroundColor: PALETTE[0]
-          },
-          {
-            label: 'WD (piezas)',
-            data: wdCounts,
-            backgroundColor: PALETTE[1]
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          x: { title: { display: true, text: 'Línea' } },
-          y: { beginAtZero: true, title: { display: true, text: 'Piezas' } }
-        },
-        plugins: {
-          legend: { position: 'top' }
-        }
-      }
-    }
-  );
-}
-
-
-let downtimeChartInstance;
-
-async function renderDowntime() {
-  const qs  = getFilterQS();
-  const url = '/api/eficiencias/weekly/downtime' + qs;
-
-  // 1) Petición autenticada
-  const res = await fetch(url, {
-    headers: getAuthHeaders()
-  });
-  if (!res.ok) {
-    console.error('Error al cargar tiempo muerto semanal:', await res.text());
-    return;
-  }
-  const raw = await res.json();
-
-  // 2) Destruye la instancia previa si existe
-  if (downtimeChartInstance) downtimeChartInstance.destroy();
-
-  // 3) Si no hay datos, cortamos
-  if (!raw.length) return;
-
-  // 4) Prepara etiquetas y datasets
-  const semanas = [...new Set(raw.map(r => r.semana))].sort((a,b)=>a-b);
-  const lineas  = [...new Set(raw.map(r => r.linea))];
-
-  const datasets = lineas.map((linea, idx) => ({
-    label: linea,
-    data: semanas.map(sem => {
-      const rec = raw.find(r => r.semana === sem && r.linea === linea);
-      return rec ? Number(rec.avg_downtime.toFixed(1)) : 0;
-    }),
-    backgroundColor: PALETTE[idx % PALETTE.length],
-    borderColor:     PALETTE[idx % PALETTE.length],
-    fill: false,
-    tension: 0.3
-  }));
-
-  // 5) Dibuja el gráfico
-  downtimeChartInstance = new Chart(
-    document.getElementById('downtimeChart'),
-    {
-      type: 'bar',  // cámbialo a 'line' si prefieres líneas
-      data: {
-        labels: semanas,
-        datasets
-      },
-      options: {
-        responsive: true,
-        interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { position: 'top' } },
-        scales: {
-          x: { title: { display: true, text: 'Semana' } },
-          y: { beginAtZero: true, title: { display: true, text: 'Minutos perdidos' } }
-        }
-      }
-    }
-  );
-}
-
-
-  // Llamada única a todos
-  async function renderAll() {
-    await safeRender(renderDashboard);
-    await safeRender(renderKPIs); 
-    await safeRender(renderWeekly);
-    await safeRender(renderDailyProcess);
-    await safeRender(renderDailyLine);
-    await safeRender(renderTopAssociates);
-    await safeRender(renderShift);
-    await safeRender(renderCounts);
-    await safeRender(renderDowntime);
-  }
-
-  // Inicia
-  window.addEventListener('DOMContentLoaded', async () => {
-    await loadFilterOptions();
-    document.getElementById('applyFilters').addEventListener('click', renderAll);
-    renderAll();
-  });
-</script>
-<script>
-  const API_BASE = "";
-  const TOKEN = localStorage.getItem("token");
-
-  // Redirige a login si no hay token
-  if (!TOKEN) {
-    window.location.href = "/login.html";
-  }
-
-  // logout
-  document.getElementById("btn-logout")?.addEventListener("click", () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user_email");
-    localStorage.removeItem("user_role");
-    window.location.href = "/login.html";
-  });
-
-  async function fetchEficiencias() {
-    const url = `${API_BASE}/api/eficiencias?limit=50`;
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${TOKEN}` }
-    });
-
-    if (res.status === 401) {
-      // token inválido o vencido
-      localStorage.removeItem("token");
-      window.location.href = "/login.html";
-      return;
-    }
-
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error("Error cargando eficiencias: " + txt);
-    }
-
-    return res.json();
-  }
-
-  function renderTabla(data) {
-    const cont = document.getElementById("tabla-eficiencias");
-    if (!cont) return;
-
-    if (!data || !data.length) {
-      cont.innerHTML = `<p>No hay registros aún.</p>`;
-      return;
-    }
-
-    const headers = [
-      "id", "nombre_asociado", "linea", "supervisor", "tipo_proceso",
-      "proceso", "eficiencia_asociado", "semana", "turno", "piezas", "tiempo_muerto"
-    ];
-
-    const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>`;
-    const rows = data.map(row => {
-      return `<tr>${headers.map(h => `<td>${row[h] ?? ""}</td>`).join("")}</tr>`;
-    }).join("");
-    const tbody = `<tbody>${rows}</tbody>`;
-
-    cont.innerHTML = `<table border="1" cellpadding="6" cellspacing="0">${thead}${tbody}</table>`;
-  }
-
-  // pinta el rol y correo en alguna parte si tienes spans
-  (function paintUserInfo() {
-    const email = localStorage.getItem("user_email") || "";
-    const role = localStorage.getItem("user_role") || "";
-    const elEmail = document.getElementById("user-email");
-    const elRole = document.getElementById("user-role");
-    if (elEmail) elEmail.textContent = email;
-    if (elRole) elRole.textContent = role;
-  })();
-
-  // carga inicial
-  (async function init() {
-    try {
-      const data = await fetchEficiencias();
-      renderTabla(data);
-    } catch (e) {
-      console.error(e);
-      alert(e.message);
-    }
-  })();
-</script>
+</html>
