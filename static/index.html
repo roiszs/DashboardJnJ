@@ -236,12 +236,14 @@
 
     // --------- Helpers ----------
        // --- Formatea minutos a "X h Y min"
-    function formatMinutesToHm(minutos) {
-      const total = Math.round(minutos ?? 0);
-      const h = Math.floor(total / 60);
-      const m = total % 60;
-      return h > 0 ? `${h} h ${m} min` : `${m} min`;
-    }
+   function formatMinutes(mins) {
+  const m = Math.round(Number(mins || 0));
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  return r === 0 ? `${h} h` : `${h} h ${r} min`;
+}
+
     function createChart(id, cfg) {
       const canvas = document.getElementById(id);
       const old = Chart.getChart(canvas);
@@ -352,19 +354,24 @@
       }
       document.getElementById('kpi-best-line').textContent = bestLine;
 
-      const dtRes = await fetch('/api/eficiencias/weekly/downtime' + qs, { headers: getAuthHeaders() });
+    const dtRes = await fetch('/api/eficiencias/weekly/downtime' + qs, { headers: getAuthHeaders() });
       if (dtRes.ok) {
-        const dtData = await dtRes.json();
+    const dtData = await dtRes.json();
       if (dtData.length) {
-        const maxSemana = Math.max(...dtData.map(r => r.semana));
-        const recs = dtData.filter(r => r.semana === maxSemana);
+    const maxSemana = Math.max(...dtData.map(r => r.semana));
+    const recs = dtData.filter(r => r.semana === maxSemana);
 
-        const avgDowMin = recs.reduce((s, r) => s + (r.avg_downtime ?? 0), 0) / recs.length; // minutos promedio
-        document.getElementById('kpi-downtime').textContent = `${minutesToHours(avgDowMin)} h`;
-          } else {
-              document.getElementById('kpi-downtime').textContent = '0 h';
-          }
-        }
+      // Elige: promedio o total (descomenta UNA)
+    const avgDowMin   = recs.reduce((s, r) => s + (r.avg_downtime ?? 0), 0) / recs.length; // promedio (min)
+    // const totalDowMin = recs.reduce((s, r) => s + (r.avg_downtime ?? 0), 0);            // total (min)
+
+    document.getElementById('kpi-downtime').textContent = formatMinutes(avgDowMin);
+    // document.getElementById('kpi-downtime').textContent = formatMinutes(totalDowMin);
+  } else {
+    document.getElementById('kpi-downtime').textContent = '0 min';
+  }
+}
+
 
       }
 
@@ -638,59 +645,60 @@
       });
     }
 
-   async function renderDowntime() {
-    const res = await fetch('/api/eficiencias/weekly/downtime' + getFilterQS(), {
-      headers: getAuthHeaders()
-    });
-    if (!res.ok) return;
-    const raw = await res.json();
+  async function renderDowntime() {
+  const res = await fetch('/api/eficiencias/weekly/downtime' + getFilterQS(), {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) return;
+  const raw = await res.json();
 
-    if (downtimeChartInstance) downtimeChartInstance.destroy();
-    if (!raw.length) {
-      // Limpia el canvas si no hay datos
-      const ctx = document.getElementById('downtimeChart').getContext('2d');
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.font = '14px sans-serif';
-      ctx.fillText('Sin datos para el filtro actual', 20, 30);
-      return;
-    }
-
-    const semanas = [...new Set(raw.map(r => r.semana))].sort((a, b) => a - b);
-    const lineas  = [...new Set(raw.map(r => r.linea))];
-
-    // Construye datasets en HORAS (minutos / 60, con 2 decimales)
-    const datasets = lineas.map((linea, idx) => ({
-      label: linea,
-      data: semanas.map(sem => {
-        const rec  = raw.find(r => r.semana === sem && r.linea === linea);
-        const mins = rec ? Number(rec.avg_downtime || 0) : 0;
-        return Number((mins / 60).toFixed(2)); // horas
-      }),
-      backgroundColor: PALETTE[idx % PALETTE.length],
-      borderColor:     PALETTE[idx % PALETTE.length],
-    }));
-
-    downtimeChartInstance = createChart('downtimeChart', {
-      type: 'bar',
-      data: { labels: semanas, datasets },
-      options: {
-        responsive: true,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { position: 'top' },
-          tooltip: {
-            callbacks: {
-              label: (item) => `${item.dataset.label}: ${item.formattedValue} h`
-            }
-          }
-        },
-        scales: {
-          x: { title: { display: true, text: 'Semana' } },
-          y: { beginAtZero: true, title: { display: true, text: 'Horas' } }
-        }
-      }
-    });
+  if (downtimeChartInstance) downtimeChartInstance.destroy();
+  if (!raw.length) {
+    const ctx = document.getElementById('downtimeChart').getContext('2d');
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.font = '14px sans-serif';
+    ctx.fillText('Sin datos para el filtro actual', 20, 30);
+    return;
   }
+
+  const semanas = [...new Set(raw.map(r => r.semana))].sort((a,b)=>a-b);
+  const lineas  = [...new Set(raw.map(r => r.linea))];
+
+  // Mantén los datos en MINUTOS
+  const datasets = lineas.map((linea, idx) => ({
+    label: linea,
+    data: semanas.map(sem => {
+      const rec  = raw.find(r => r.semana === sem && r.linea === linea);
+      const mins = rec ? Number(rec.avg_downtime || 0) : 0;
+      return Number(mins.toFixed(1)); // minutos
+    }),
+    backgroundColor: PALETTE[idx % PALETTE.length],
+    borderColor:     PALETTE[idx % PALETTE.length],
+  }));
+
+  downtimeChartInstance = createChart('downtimeChart', {
+    type: 'bar',
+    data: { labels: semanas, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            // Muestra "X h Y min" o "Z min" según aplique
+            label: (item) => `${item.dataset.label}: ${formatMinutes(item.raw)}`
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Semana' } },
+        y: { beginAtZero: true, title: { display: true, text: 'Minutos' } }
+      }
+    }
+  });
+}
+
 
     // Borrar registro (solo admin)
     window.borrarRegistro = async function(id, btn) {
