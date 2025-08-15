@@ -355,16 +355,18 @@
       const dtRes = await fetch('/api/eficiencias/weekly/downtime' + qs, { headers: getAuthHeaders() });
       if (dtRes.ok) {
         const dtData = await dtRes.json();
-        if (dtData.length) {
-          const maxSemana = Math.max(...dtData.map(r => r.semana));
-          const recs = dtData.filter(r => r.semana === maxSemana);
-          const avgDow = recs.reduce((s,r)=>s+r.avg_downtime,0) / recs.length;
-          document.getElementById('kpi-downtime').textContent = formatMinutesToHm(avgDow);
-        } else {
-          document.getElementById('kpi-downtime').textContent = '0 min';
+      if (dtData.length) {
+        const maxSemana = Math.max(...dtData.map(r => r.semana));
+        const recs = dtData.filter(r => r.semana === maxSemana);
+
+        const avgDowMin = recs.reduce((s, r) => s + (r.avg_downtime ?? 0), 0) / recs.length; // minutos promedio
+        document.getElementById('kpi-downtime').textContent = `${minutesToHours(avgDowMin)} h`;
+          } else {
+              document.getElementById('kpi-downtime').textContent = '0 h';
+          }
         }
+
       }
-    }
 
     async function renderDashboard() {
       const res = await fetch('/api/eficiencias' + getFilterQS(), { headers: getAuthHeaders() });
