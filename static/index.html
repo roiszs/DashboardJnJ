@@ -188,6 +188,11 @@
  
     const PALETTE = ['#2563eb', '#dc2626', '#f59e0b', '#10b981', '#7c3aed', '#0d9488', '#f43f5e', '#6366f1'];
 
+    function minutesToHours(mins) {
+      return (Number(mins || 0) / 60).toFixed(2); // horas con 2 decimales
+    }
+
+
     function getAuthHeaders() {
       const token = localStorage.getItem('token');
       return { 'Authorization': `Bearer ${token}` };
