@@ -355,6 +355,13 @@ def conteo_sw_wd_por_linea(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# routers/eficiencias.py
+from typing import Optional
+from datetime import date
+from fastapi import Depends, HTTPException
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+
 @router.get("/weekly/downtime", dependencies=[Depends(get_current_active_user)])
 def downtime_weekly_by_line(
     start:   Optional[date] = None,
@@ -367,22 +374,23 @@ def downtime_weekly_by_line(
         q = db.query(
             models.Eficiencia.semana.label("semana"),
             models.Eficiencia.linea.label("linea"),
-            func.avg(models.Eficiencia.tiempo_muerto).label("avg_downtime")
+            func.sum(models.Eficiencia.tiempo_muerto).label("total_downtime")  # ← SUMA
         )
         if start:   q = q.filter(models.Eficiencia.fecha >= start)
         if end:     q = q.filter(models.Eficiencia.fecha <= end)
         if linea:   q = q.filter(models.Eficiencia.linea == linea)
         if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
-        q = (
-            q.group_by(models.Eficiencia.semana, models.Eficiencia.linea)
+
+        q = q.group_by(models.Eficiencia.semana, models.Eficiencia.linea)\
              .order_by(models.Eficiencia.semana)
-        )
+
         return [
-            {"semana": int(sem), "linea": line, "avg_downtime": float(round(dt, 2))}
-            for sem, line, dt in q.all()
+            {"semana": int(sem), "linea": line, "total_downtime": float(tm or 0)}
+            for sem, line, tm in q.all()
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # 9) Subida masiva desde Excel (solo admin)
 @router.post("/upload", dependencies=[Depends(get_current_active_admin)])
