@@ -236,13 +236,15 @@
 
     // --------- Helpers ----------
        // --- Formatea minutos a "X h Y min"
-   function formatMinutes(mins) {
+       function formatMinutes(mins) {
   const m = Math.round(Number(mins || 0));
   if (m < 60) return `${m} min`;
   const h = Math.floor(m / 60);
   const r = m % 60;
-  return r === 0 ? `${h} h` : `${h} h ${r} min`;
+  if (r === 0) return `${h} h`;
+  return `${h} h ${r} min`;
 }
+
 
     function createChart(id, cfg) {
       const canvas = document.getElementById(id);
