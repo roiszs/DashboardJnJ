@@ -236,14 +236,14 @@
 
     // --------- Helpers ----------
        // --- Formatea minutos a "X h Y min"
-       function formatMinutes(mins) {
-  const m = Math.round(Number(mins || 0));
-  if (m < 60) return `${m} min`;
-  const h = Math.floor(m / 60);
-  const r = m % 60;
-  if (r === 0) return `${h} h`;
-  return `${h} h ${r} min`;
+       function formatMinutes(totalMins) {
+  const mins = Math.round(Number(totalMins) || 0);
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h} h ${m} min` : `${h} h`;
 }
+
 
 
     function createChart(id, cfg) {
@@ -663,22 +663,18 @@
   const lineas  = [...new Set(raw.map(r => r.linea))];
 
   // Mantén los datos en MINUTOS
-  const datasets = lineas.map((linea, idx) => ({
-    label: linea,
-    data: semanas.map(sem => {
-  const rec  = raw.find(r => r.semana === sem && r.linea === linea);
-  const mins = rec ? rec.avg_downtime : 0;
+  // Mantén SIEMPRE los datos en MINUTOS
+const datasets = lineas.map((linea, idx) => ({
+  label: linea,
+  data: semanas.map(sem => {
+    const rec  = raw.find(r => r.semana === sem && r.linea === linea);
+    const mins = rec ? Number(rec.avg_downtime || 0) : 0;
+    return Math.round(mins); // minutos enteros
+  }),
+  backgroundColor: PALETTE[idx % PALETTE.length],
+  borderColor:     PALETTE[idx % PALETTE.length],
+}));
 
-  if (mins < 60) {
-    return mins; // minutos
-  } else {
-    return +(mins / 60).toFixed(2); // horas
-  }
-}),
-
-    backgroundColor: PALETTE[idx % PALETTE.length],
-    borderColor:     PALETTE[idx % PALETTE.length],
-  }));
 
   downtimeChartInstance = createChart('downtimeChart', {
     type: 'bar',
