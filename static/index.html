@@ -643,14 +643,20 @@
       });
     }
 
-  async function renderDowntime() {
+    async function renderDowntime() {
   const res = await fetch('/api/eficiencias/weekly/downtime' + getFilterQS(), {
     headers: getAuthHeaders()
   });
   if (!res.ok) return;
   const raw = await res.json();
 
+  // DEBUG opcional (útil si “no aparece”): descomenta para ver lo que llega
+  // console.debug('downtime raw', raw);
+
+  // Destruye instancia previa
   if (downtimeChartInstance) downtimeChartInstance.destroy();
+
+  // Sin datos -> limpia canvas y mensaje
   if (!raw.length) {
     const ctx = document.getElementById('downtimeChart').getContext('2d');
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -659,22 +665,21 @@
     return;
   }
 
-  const semanas = [...new Set(raw.map(r => r.semana))].sort((a,b)=>a-b);
+  // Fuerza tipos: semana como número
+  const semanas = [...new Set(raw.map(r => Number(r.semana)))].sort((a, b) => a - b);
   const lineas  = [...new Set(raw.map(r => r.linea))];
 
-  // Mantén los datos en MINUTOS
-  // Mantén SIEMPRE los datos en MINUTOS
-const datasets = lineas.map((linea, idx) => ({
-  label: linea,
-  data: semanas.map(sem => {
-    const rec  = raw.find(r => r.semana === sem && r.linea === linea);
-    const mins = rec ? Number(rec.avg_downtime || 0) : 0;
-    return Math.round(mins); // minutos enteros
-  }),
-  backgroundColor: PALETTE[idx % PALETTE.length],
-  borderColor:     PALETTE[idx % PALETTE.length],
-}));
-
+  // Mantén SIEMPRE los datos en MINUTOS (el eje es minutos)
+  const datasets = lineas.map((linea, idx) => ({
+    label: linea,
+    data: semanas.map(sem => {
+      const rec = raw.find(r => Number(r.semana) === sem && r.linea === linea);
+      const mins = rec ? Number(r.avg_downtime || 0) : 0; // minuto promedio devuelto por el API
+      return Math.round(mins);
+    }),
+    backgroundColor: PALETTE[idx % PALETTE.length],
+    borderColor:     PALETTE[idx % PALETTE.length],
+  }));
 
   downtimeChartInstance = createChart('downtimeChart', {
     type: 'bar',
@@ -686,18 +691,26 @@ const datasets = lineas.map((linea, idx) => ({
         legend: { position: 'top' },
         tooltip: {
           callbacks: {
-            // Muestra "X h Y min" o "Z min" según aplique
+            // Muestra “Z min” o “X h Y min” según aplique
             label: (item) => `${item.dataset.label}: ${formatMinutes(item.raw)}`
           }
         }
       },
+      // El eje Y también se formatea igual que el tooltip
       scales: {
         x: { title: { display: true, text: 'Semana' } },
-        y: { beginAtZero: true, title: { display: true, text: 'Minutos' } }
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Minutos' },
+          ticks: {
+            callback: (value) => formatMinutes(value)
+          }
+        }
       }
     }
   });
 }
+
 
 
     // Borrar registro (solo admin)
