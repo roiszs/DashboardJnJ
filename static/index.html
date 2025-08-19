@@ -666,10 +666,16 @@
   const datasets = lineas.map((linea, idx) => ({
     label: linea,
     data: semanas.map(sem => {
-      const rec  = raw.find(r => r.semana === sem && r.linea === linea);
-      const mins = rec ? Number(rec.avg_downtime || 0) : 0;
-      return Number(mins.toFixed(1)); // minutos
-    }),
+  const rec  = raw.find(r => r.semana === sem && r.linea === linea);
+  const mins = rec ? rec.avg_downtime : 0;
+
+  if (mins < 60) {
+    return mins; // minutos
+  } else {
+    return +(mins / 60).toFixed(2); // horas
+  }
+}),
+
     backgroundColor: PALETTE[idx % PALETTE.length],
     borderColor:     PALETTE[idx % PALETTE.length],
   }));
