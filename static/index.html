@@ -354,23 +354,19 @@
       }
       document.getElementById('kpi-best-line').textContent = bestLine;
 
-    const dtRes = await fetch('/api/eficiencias/weekly/downtime' + qs, { headers: getAuthHeaders() });
-      if (dtRes.ok) {
-    const dtData = await dtRes.json();
-      if (dtData.length) {
-    const maxSemana = Math.max(...dtData.map(r => r.semana));
-    const recs = dtData.filter(r => r.semana === maxSemana);
+      const dtRes = await fetch('/api/eficiencias/weekly/downtime' + qs, { headers: getAuthHeaders() });
+        if (dtRes.ok) {
+      const dtData = await dtRes.json();
+        if (dtData.length) {
+      const maxSemana = Math.max(...dtData.map(r => r.semana));
+      const recs = dtData.filter(r => r.semana === maxSemana);
+      const totalDow = recs.reduce((s,r)=> s + (r.total_downtime || 0), 0);  // ← usa total_downtime
+      document.getElementById('kpi-downtime').textContent = formatMinutes(totalDow);
+          } else {
+       document.getElementById('kpi-downtime').textContent = '0 min';
+          }
+      }
 
-      // Elige: promedio o total (descomenta UNA)
-    const avgDowMin   = recs.reduce((s, r) => s + (r.avg_downtime ?? 0), 0) / recs.length; // promedio (min)
-    // const totalDowMin = recs.reduce((s, r) => s + (r.avg_downtime ?? 0), 0);            // total (min)
-
-    document.getElementById('kpi-downtime').textContent = formatMinutes(avgDowMin);
-    // document.getElementById('kpi-downtime').textContent = formatMinutes(totalDowMin);
-  } else {
-    document.getElementById('kpi-downtime').textContent = '0 min';
-  }
-}
 
 
       }

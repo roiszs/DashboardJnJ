@@ -356,11 +356,6 @@ def conteo_sw_wd_por_linea(
         raise HTTPException(status_code=500, detail=str(e))
 
 # routers/eficiencias.py
-from typing import Optional
-from datetime import date
-from fastapi import Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 @router.get("/weekly/downtime", dependencies=[Depends(get_current_active_user)])
 def downtime_weekly_by_line(
