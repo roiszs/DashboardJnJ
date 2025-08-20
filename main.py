@@ -5,14 +5,19 @@ from fastapi import (
     HTTPException, status, File, UploadFile
 )
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse,
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import pandas as pd
 import io, re
+from io import BytesIO, StringIO
+import csv
+from openpyxl import Workbook
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
 
 from datetime import date
-from typing import Optional
+from typing import Optional, list
 
 import models, schemas
 from database import engine, SessionLocal 
@@ -20,6 +25,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import models
 from database import engine
+from . import models
+from .deps import get_db, get_current_active_user
 
 from auth import (
     fastapi_users,
@@ -86,6 +93,104 @@ def get_db():
         db.close()
 
 # 7) APIRouter para todas las rutas /api/eficiencias
+@router.get("/api/eficiencias/template", dependencies=[Depends(get_current_active_user)])
+def download_template():
+    """
+    Genera y envía una plantilla Excel con los encabezados que espera el backend.
+    """
+    headers = [
+        "fecha", "linea", "proceso", "tipo_proceso", "turno", "semana",
+        "nombre_asociado", "supervisor", "eficiencia_asociado", "piezas", "tiempo_muerto"
+    ]
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Eficiencias"
+
+    # Encabezados en negritas
+    bold = Font(bold=True)
+    for col_idx, h in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell.font = bold
+        # ancho de columna aproximado
+        ws.column_dimensions[get_column_letter(col_idx)].width = max(12, len(h) + 2)
+
+    # Fila de ejemplo
+    ws.append([
+        "2025-07-15", "L28", "Epoxy", "SW", "1er", 29,
+        "Juan Pérez", "Ana López", 85.5, 7200, 70
+    ])
+
+    # Congelar encabezado
+    ws.freeze_panes = "A2"
+
+    # Serializa a bytes
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+
+    fname = "plantilla_eficiencias.xlsx"
+    return StreamingResponse(
+        bio,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'}
+    )
+
+# --------- EXPORT CSV (con filtros) ---------
+@router.get("/api/eficiencias/export.csv", dependencies=[Depends(get_current_active_user)])
+def export_csv(
+    start:   Optional[date] = None,
+    end:     Optional[date] = None,
+    linea:   Optional[str]  = None,
+    proceso: Optional[str]  = None,
+    limit:   int            = 100000,
+    db:      Session        = Depends(get_db),
+):
+    """
+    Exporta las eficiencias filtradas a CSV. Usa los mismos parámetros que /api/eficiencias.
+    """
+    q = db.query(models.Eficiencia)
+    if start:   q = q.filter(models.Eficiencia.fecha >= start)
+    if end:     q = q.filter(models.Eficiencia.fecha <= end)
+    if linea:   q = q.filter(models.Eficiencia.linea == linea)
+    if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
+    q = q.order_by(models.Eficiencia.fecha.desc()).limit(limit)
+
+    rows: List[models.Eficiencia] = q.all()
+
+    headers = [
+        "id", "fecha", "linea", "proceso", "tipo_proceso", "turno", "semana",
+        "nombre_asociado", "supervisor", "eficiencia_asociado", "piezas", "tiempo_muerto"
+    ]
+
+    sio = StringIO()
+    writer = csv.writer(sio)
+    writer.writerow(headers)
+
+    for r in rows:
+        writer.writerow([
+            r.id,
+            getattr(r, "fecha", ""),
+            getattr(r, "linea", ""),
+            getattr(r, "proceso", ""),
+            getattr(r, "tipo_proceso", ""),
+            getattr(r, "turno", ""),
+            getattr(r, "semana", ""),
+            getattr(r, "nombre_asociado", ""),
+            getattr(r, "supervisor", ""),
+            getattr(r, "eficiencia_asociado", ""),
+            getattr(r, "piezas", ""),
+            getattr(r, "tiempo_muerto", ""),
+        ])
+
+    sio.seek(0)
+    fname = "eficiencias_filtradas.csv"
+    return StreamingResponse(
+        iter([sio.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'}
+    )
+
 router = APIRouter(prefix="/api/eficiencias", tags=["eficiencias"])
 
 # 7.1) Crear nuevo registro (solo admin)
