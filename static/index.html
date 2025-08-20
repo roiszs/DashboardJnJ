@@ -650,10 +650,7 @@
   if (!res.ok) return;
   const raw = await res.json();
 
-  // DEBUG opcional (útil si “no aparece”): descomenta para ver lo que llega
-  // console.debug('downtime raw', raw);
-
-  // Destruye instancia previa
+  // Destruye la instancia previa
   if (downtimeChartInstance) downtimeChartInstance.destroy();
 
   // Sin datos -> limpia canvas y mensaje
@@ -665,16 +662,17 @@
     return;
   }
 
-  // Fuerza tipos: semana como número
+  // Fuerza tipos para evitar no-coincidencias al filtrar
   const semanas = [...new Set(raw.map(r => Number(r.semana)))].sort((a, b) => a - b);
   const lineas  = [...new Set(raw.map(r => r.linea))];
 
-  // Mantén SIEMPRE los datos en MINUTOS (el eje es minutos)
+  // *** FIX: usar rec.avg_downtime (no r.avg_downtime) ***
+  // Mantenemos SIEMPRE los datos en minutos; tooltip/eje los formatean a "X h Y min"
   const datasets = lineas.map((linea, idx) => ({
     label: linea,
     data: semanas.map(sem => {
-      const rec = raw.find(r => Number(r.semana) === sem && r.linea === linea);
-      const mins = rec ? Number(r.avg_downtime || 0) : 0; // minuto promedio devuelto por el API
+      const rec  = raw.find(r => Number(r.semana) === sem && r.linea === linea);
+      const mins = rec ? Number(rec.avg_downtime || 0) : 0;  // <- AQUÍ EL CAMBIO
       return Math.round(mins);
     }),
     backgroundColor: PALETTE[idx % PALETTE.length],
@@ -691,25 +689,22 @@
         legend: { position: 'top' },
         tooltip: {
           callbacks: {
-            // Muestra “Z min” o “X h Y min” según aplique
             label: (item) => `${item.dataset.label}: ${formatMinutes(item.raw)}`
           }
         }
       },
-      // El eje Y también se formatea igual que el tooltip
       scales: {
         x: { title: { display: true, text: 'Semana' } },
         y: {
           beginAtZero: true,
           title: { display: true, text: 'Minutos' },
-          ticks: {
-            callback: (value) => formatMinutes(value)
-          }
+          ticks: { callback: (value) => formatMinutes(value) }
         }
       }
     }
   });
 }
+
 
 
 
