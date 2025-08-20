@@ -376,8 +376,11 @@ def downtime_weekly_by_line(
         if linea:   q = q.filter(models.Eficiencia.linea == linea)
         if proceso: q = q.filter(models.Eficiencia.proceso == proceso)
 
-        q = q.group_by(models.Eficiencia.semana, models.Eficiencia.linea)
-        .order_by(models.Eficiencia.semana)
+        q = (
+        q.group_by(models.Eficiencia.semana, models.Eficiencia.linea)
+         .order_by(models.Eficiencia.semana)
+        )
+
 
         return [
             {"semana": int(sem), "linea": line, "sum_downtime": float(dt or 0)}
