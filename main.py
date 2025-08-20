@@ -369,7 +369,7 @@ def downtime_weekly_by_line(
         q = db.query(
             models.Eficiencia.semana.label("semana"),
             models.Eficiencia.linea.label("linea"),
-            func.sum(models.Eficiencia.tiempo_muerto).label("total_downtime")  # ← SUMA
+            func.sum(models.Eficiencia.tiempo_muerto).label("total_downtime")
         )
         if start:   q = q.filter(models.Eficiencia.fecha >= start)
         if end:     q = q.filter(models.Eficiencia.fecha <= end)
