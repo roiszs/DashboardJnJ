@@ -292,6 +292,9 @@ async function exportCSV() {
   downloadBlob(blob, 'eficiencias_filtradas.csv');
 }
 
+document.getElementById('btn-download-template')?.addEventListener('click', downloadTemplate);
+document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
+
 
 
 

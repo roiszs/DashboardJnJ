@@ -87,3 +87,8 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+
+    SECRET_KEY=super_secreto
+ACCESS_TOKEN_EXPIRE_MINUTES=2880
+SQLALCHEMY_DATABASE_URL=sqlite:///./app.db
+
