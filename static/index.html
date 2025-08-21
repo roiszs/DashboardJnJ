@@ -259,6 +259,39 @@
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function downloadTemplate() {
+  const res = await fetch('/api/eficiencias/template', { headers: getAuthHeaders() });
+  if (!res.ok) {
+    alert('No se pudo descargar la plantilla:\n' + (await res.text()));
+    return;
+  }
+  const blob = await res.blob();
+  downloadBlob(blob, 'plantilla_eficiencias.xlsx');
+}
+
+async function exportCSV() {
+  const qs   = getFilterQS(); // usa tus filtros actuales
+  const url  = '/api/eficiencias/export.csv' + qs;
+  const res  = await fetch(url, { headers: getAuthHeaders() });
+  if (!res.ok) {
+    alert('No se pudo exportar CSV:\n' + (await res.text()));
+    return;
+  }
+  const blob = await res.blob();
+  downloadBlob(blob, 'eficiencias_filtradas.csv');
+}
+
 
 
 
