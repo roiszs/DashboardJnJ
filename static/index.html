@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <title>Dashboard de Eficiencias</title>
 
+  
+
   <!-- Redirección si no hay token -->
   <script>
     if (!localStorage.getItem('token')) {
@@ -670,6 +672,17 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
         }
       });
     }
+
+    async function fetchAuthed(url, options = {}) {
+      const res = await fetch(url, { ...options, headers: { ...(options.headers||{}), ...getAuthHeaders() } });
+    if (res.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login.html';
+    return Promise.reject(new Error('Unauthorized'));
+  }
+  return res;
+}
+
 
     async function renderCounts() {
       const res = await fetch('/api/eficiencias/counts' + getFilterQS(), { headers: getAuthHeaders() });
