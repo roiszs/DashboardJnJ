@@ -1,6 +1,6 @@
 # schemas.py
 
-from .env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
+from env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
 from pydantic import BaseModel, ConfigDict, field_validator
 import re
 

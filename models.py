@@ -4,7 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from database import Base
 from datetime import date
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable  # <- importante
-from .env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
+from env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
 
 
 

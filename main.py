@@ -17,7 +17,7 @@ from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
 from datetime import date
-from typing import Optional, list
+from typing import Optional
 
 import models, schemas
 from database import engine, SessionLocal 
@@ -26,7 +26,7 @@ from contextlib import asynccontextmanager
 import models
 from database import engine
 from . import models
-from .deps import get_db, get_current_active_user
+from deps import get_db, get_current_active_user
 
 from auth import (
     fastapi_users,
@@ -35,7 +35,7 @@ from auth import (
     get_current_active_admin,
     UserRead, UserCreate, UserUpdate, 
 )
-from .env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
+from env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
 
 
 from sqlalchemy import inspect
