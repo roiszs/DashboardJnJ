@@ -235,7 +235,7 @@
       const fd = new FormData();
       fd.append('file', file);
       try {
-        const res = await fetch('/api/eficiencias/upload', {
+        const res = await fetchAuthed('/api/eficiencias/upload', {
           method: 'POST',
           headers: getAuthHeaders(), // solo auth; FormData pone boundary
           body: fd
@@ -273,7 +273,7 @@
     }
 
     async function downloadTemplate() {
-  const res = await fetch('/api/eficiencias/template', { headers: getAuthHeaders() });
+  const res = await fetchAuthed('/api/eficiencias/template', { headers: getAuthHeaders() });
   if (!res.ok) {
     alert('No se pudo descargar la plantilla:\n' + (await res.text()));
     return;
@@ -285,7 +285,7 @@
 async function exportCSV() {
   const qs   = getFilterQS(); // usa tus filtros actuales
   const url  = '/api/eficiencias/export.csv' + qs;
-  const res  = await fetch(url, { headers: getAuthHeaders() });
+  const res  = await fetchAuthed(url, { headers: getAuthHeaders() });
   if (!res.ok) {
     alert('No se pudo exportar CSV:\n' + (await res.text()));
     return;
@@ -390,7 +390,7 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
     async function renderKPIs() {
       const qs = getFilterQS();
 
-      const res = await fetch('/api/eficiencias' + qs, { headers: getAuthHeaders() });
+      const res = await fetchAuthed('/api/eficiencias' + qs, { headers: getAuthHeaders() });
       if (!res.ok) return;
       const data = await res.json();
 
@@ -432,7 +432,7 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
       }
 
     async function renderDashboard() {
-      const res = await fetch('/api/eficiencias' + getFilterQS(), { headers: getAuthHeaders() });
+      const res = await fetchAuthed('/api/eficiencias' + getFilterQS(), { headers: getAuthHeaders() });
       if (!res.ok) { console.error('Error eficiencias:', await res.text()); return; }
       const data = await res.json();
 
@@ -462,7 +462,7 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
     let weeklyChartInstance, dailyProcessChartInstance, dailyLineChartInstance, topAssocChartInstance, shiftChartInstance, countChartInstance, downtimeChartInstance;
 
     async function renderWeekly() {
-      const res = await fetch('/api/eficiencias/weekly' + getFilterQS(), { headers: getAuthHeaders() });
+      const res = await fetchAuthed('/api/eficiencias/weekly' + getFilterQS(), { headers: getAuthHeaders() });
       if (!res.ok) return;
       const raw = await res.json();
 
@@ -522,7 +522,7 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
     }
 
     async function renderDailyProcess() {
-      const res = await fetch('/api/eficiencias/daily/process' + getFilterQS(), { headers: getAuthHeaders() });
+      const res = await fetchAuthed('/api/eficiencias/daily/process' + getFilterQS(), { headers: getAuthHeaders() });
       if (!res.ok) return;
       const raw = await res.json();
 
@@ -583,7 +583,7 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
     }
 
     async function renderDailyLine() {
-      const res = await fetch('/api/eficiencias/daily/line' + getFilterQS(), { headers: getAuthHeaders() });
+      const res = await fetchAuthed('/api/eficiencias/daily/line' + getFilterQS(), { headers: getAuthHeaders() });
       if (!res.ok) return;
       const raw = await res.json();
 
@@ -626,7 +626,7 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
     async function renderTopAssociates() {
       const qs = getFilterQS();
       const sep = qs ? '&' : '?';
-      const res = await fetch('/api/eficiencias/top-associates' + qs + sep + 'limit=5', { headers: getAuthHeaders() });
+      const res = await fetchAuthed('/api/eficiencias/top-associates' + qs + sep + 'limit=5', { headers: getAuthHeaders() });
       if (!res.ok) return;
       const data = await res.json();
 
@@ -650,7 +650,7 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
     }
 
     async function renderShift() {
-      const res = await fetch('/api/eficiencias/shift' + getFilterQS(), { headers: getAuthHeaders() });
+      const res = await fetchAuthed('/api/eficiencias/shift' + getFilterQS(), { headers: getAuthHeaders() });
       if (!res.ok) return;
       const data = await res.json();
 
@@ -674,7 +674,7 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
     }
 
     async function fetchAuthed(url, options = {}) {
-      const res = await fetch(url, { ...options, headers: { ...(options.headers||{}), ...getAuthHeaders() } });
+      const res = await fetchAuthed(url, { ...options, headers: { ...(options.headers||{}), ...getAuthHeaders() } });
     if (res.status === 401) {
         localStorage.removeItem('token');
         window.location.href = '/login.html';
@@ -685,7 +685,7 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
 
 
     async function renderCounts() {
-      const res = await fetch('/api/eficiencias/counts' + getFilterQS(), { headers: getAuthHeaders() });
+      const res = await fetchAuthed('/api/eficiencias/counts' + getFilterQS(), { headers: getAuthHeaders() });
       if (!res.ok) return;
       const data = await res.json();
 
@@ -713,7 +713,7 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
     }
 
     async function renderDowntime() {
-  const res = await fetch('/api/eficiencias/weekly/downtime' + getFilterQS(), {
+  const res = await fetchAuthed ('/api/eficiencias/weekly/downtime' + getFilterQS(), {
     headers: getAuthHeaders()
   });
   if (!res.ok) return;
@@ -771,7 +771,7 @@ document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
     // Borrar registro (solo admin)
     window.borrarRegistro = async function(id, btn) {
       if (!confirm('¿Eliminar registro #' + id + '?')) return;
-      const res = await fetch('/api/eficiencias/' + id, {
+      const res = await fetchAuthed('/api/eficiencias/' + id, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
