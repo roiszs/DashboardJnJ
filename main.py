@@ -5,7 +5,7 @@ from fastapi import (
     HTTPException, status, File, UploadFile
 )
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse,
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import pandas as pd
