@@ -1,6 +1,7 @@
 # database.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from .env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
 
 # ---------- Declarative Base (SQLAlchemy 2.0) ----------
 class Base(DeclarativeBase):

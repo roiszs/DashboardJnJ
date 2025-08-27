@@ -35,6 +35,8 @@ from auth import (
     get_current_active_admin,
     UserRead, UserCreate, UserUpdate, 
 )
+from .env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
+
 
 from sqlalchemy import inspect
 print("USER TABLE:", models.User.__table__)
