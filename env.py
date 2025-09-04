@@ -3,7 +3,7 @@ import sys
 from os.path import abspath, dirname
 sys.path.append(abspath(dirname(__file__) + "/.."))
 import os
-from dotenv import load_dotenv
+from env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
 from database import Base
 # si tu metadata está en otro módulo: from models import Base
 
@@ -36,9 +36,6 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-
-# En dev carga .env; en prod no pasa nada si no existe
-load_dotenv(override=False)
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-super-secret")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "2880"))
@@ -96,7 +93,8 @@ if context.is_offline_mode():
 else:
     run_migrations_online()
 
-    SECRET_KEY=super_secreto
+    SECRET_KEY="super_secreto"
 ACCESS_TOKEN_EXPIRE_MINUTES=2880
-SQLALCHEMY_DATABASE_URL=sqlite:///./app.db
+SQLALCHEMY_DATABASE_URL = "sqlite:///./app.db"
+
 
