@@ -1,7 +1,10 @@
 # database.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
-from env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker as async_sessionmaker
+
+import env as app_env 
 
 # ---------- Declarative Base (SQLAlchemy 2.0) ----------
 class Base(DeclarativeBase):

@@ -3,7 +3,6 @@ import sys
 from os.path import abspath, dirname
 sys.path.append(abspath(dirname(__file__) + "/.."))
 import os
-from env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
 from database import Base
 # si tu metadata está en otro módulo: from models import Base
 
