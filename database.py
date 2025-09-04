@@ -45,3 +45,10 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
 )
 
+# Carga URLs desde env.py con valores por defecto
+SYNC_DB_URL  = getattr(app_env, "SQLALCHEMY_DATABASE_URL", "sqlite:///./eficiencias.db")
+ASYNC_DB_URL = getattr(app_env, "ASYNC_SQLALCHEMY_DATABASE_URL", "") or (
+    "sqlite+aiosqlite://" + SYNC_DB_URL[len("sqlite://"):]
+    if SYNC_DB_URL.startswith("sqlite:///") else SYNC_DB_URL
+)
+
