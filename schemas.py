@@ -1,10 +1,9 @@
-# schemas.py
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, EmailStr
 import re
 
 
 # =========================
-# Modelo de lectura (BD → API)
+# ESQUEMAS DE EFICIENCIA
 # =========================
 class Eficiencia(BaseModel):
     id: int
@@ -22,9 +21,6 @@ class Eficiencia(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# =========================
-# Modelo de creación (API → BD)
-# =========================
 class EficienciaCreate(BaseModel):
     nombre_asociado: str
     linea: str
@@ -62,4 +58,49 @@ class EficienciaCreate(BaseModel):
     def validar_piezas(cls, v):
         if v < 0:
             raise ValueError("piezas debe ser un número positivo")
+        return v
+
+
+# =========================
+# ESQUEMAS DE USUARIO
+# =========================
+class UserRead(BaseModel):
+    id: int
+    email: EmailStr
+    is_active: bool
+    is_superuser: bool
+    is_verified: bool
+    role: str   # <- campo adicional definido en tu modelo
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    role: str = "viewer"   # por defecto los usuarios son "viewer"
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("role")
+    def validar_role(cls, v):
+        if v not in ("admin", "viewer"):
+            raise ValueError("El rol debe ser 'admin' o 'viewer'")
+        return v
+
+
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    password: str | None = None
+    is_active: bool | None = None
+    is_superuser: bool | None = None
+    is_verified: bool | None = None
+    role: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("role")
+    def validar_role(cls, v):
+        if v and v not in ("admin", "viewer"):
+            raise ValueError("El rol debe ser 'admin' o 'viewer'")
         return v
