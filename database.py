@@ -6,7 +6,8 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker as async_sessionmaker
 
-import env as app_env
+import config as app_env
+
 
 
 # ============= Declarative Base (SQLAlchemy 2.0) =============
