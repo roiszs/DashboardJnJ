@@ -2,6 +2,8 @@
 from database import engine, Base
 import models  # importa tu modelo actualizado
 import config as app_env
+from config import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
+
 
 # Esto borra la BD en memoria y crea TODO de nuevo:
 Base.metadata.drop_all(bind=engine)

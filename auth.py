@@ -1,7 +1,7 @@
 # auth.py (versión pulida)
 from typing import Optional, AsyncGenerator
 from collections.abc import Generator
-from env import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
+from config import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,8 @@ from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 
 from database import SessionLocal, AsyncSessionLocal
 from models import User
+from config import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
+
 
 # ====== DB session dep ======
 def get_db() -> Generator[Session, None, None]:
