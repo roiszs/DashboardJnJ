@@ -1,26 +1,23 @@
-# migrations/env.py   (ALEMBIC)
+# migrations/env.py
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 import os
-from config import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, SQLALCHEMY_DATABASE_URL
 
-
-# IMPORTA tus modelos para obtener Base.metadata
-# (models.py debería hacer: from database import Base)
+# Importa tu Base de models.py
 from models import Base
 
-# Alembic config
+# Configuración de Alembic
 config = context.config
 
-# Logging de Alembic, si existe alembic.ini
+# Logging si existe alembic.ini
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Metadata para autogenerate
+# Metadata para autogenerar migraciones
 target_metadata = Base.metadata
 
-# Si tienes la URL de BD en variables de entorno, la inyectamos a Alembic
+# Sobrescribir sqlalchemy.url si existe en las variables de entorno
 db_url = os.getenv("SQLALCHEMY_DATABASE_URL")
 if db_url:
     config.set_main_option("sqlalchemy.url", db_url)
@@ -53,4 +50,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-
